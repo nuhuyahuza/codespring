@@ -1,6 +1,6 @@
-import { LoginForm } from '@/features/auth/components/LoginForm';
+import { ForgotPasswordForm } from '@/features/auth/components/ForgotPasswordForm';
 
-export function LoginPage() {
+export function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 md:p-8">
       <div className="w-full max-w-md space-y-8">
@@ -9,10 +9,10 @@ export function LoginPage() {
             CodeSpring
           </h1>
           <p className="text-lg text-muted-foreground">
-            Welcome back to your learning journey
+            Reset your password to continue learning
           </p>
         </div>
-        <LoginForm />
+        <ForgotPasswordForm />
       </div>
     </div>
   );

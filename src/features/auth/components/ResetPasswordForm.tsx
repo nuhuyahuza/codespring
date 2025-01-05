@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
   Input,
@@ -14,12 +15,8 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui';
-import { SocialLoginButton } from './SocialLoginButton';
-import { useSocialLogin } from '../hooks/useSocialLogin';
 
-const signUpSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
+const resetPasswordSchema = z.object({
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[0-9]/, 'Password must contain at least one number')
@@ -30,34 +27,34 @@ const signUpSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type SignUpFormData = z.infer<typeof signUpSchema>;
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
-export function SignUpForm() {
+export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { handleSocialLogin, isLoading: socialLoading, error: socialError } = useSocialLogin();
+  const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
   });
 
-  const onSubmit = async (data: SignUpFormData) => {
+  const onSubmit = async (data: ResetPasswordFormData) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: data.name,
-          email: data.email,
+          token,
           password: data.password,
         }),
       });
@@ -67,8 +64,10 @@ export function SignUpForm() {
         throw new Error(error.message || 'Something went wrong');
       }
 
-      // Redirect to login page or handle successful signup
-      window.location.href = '/login';
+      // Redirect to login page after successful password reset
+      navigate('/login', {
+        state: { message: 'Password reset successful. Please sign in with your new password.' }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -79,69 +78,15 @@ export function SignUpForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Reset password</CardTitle>
         <CardDescription className="text-center">
-          Enter your details below to create your account
+          Enter your new password below
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <SocialLoginButton
-            provider="google"
-            onClick={() => handleSocialLogin('google')}
-            isLoading={socialLoading === 'google'}
-            className="w-full"
-          />
-          <SocialLoginButton
-            provider="facebook"
-            onClick={() => handleSocialLogin('facebook')}
-            isLoading={socialLoading === 'facebook'}
-            className="w-full"
-          />
-        </div>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              {...register('name')}
-              placeholder="John Doe"
-              className="w-full"
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              {...register('email')}
-              placeholder="john@example.com"
-              className="w-full"
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">New Password</Label>
             <Input
               id="password"
               type="password"
@@ -154,7 +99,7 @@ export function SignUpForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -168,9 +113,9 @@ export function SignUpForm() {
             )}
           </div>
 
-          {(error || socialError) && (
+          {error && (
             <Alert variant="destructive" className="mt-4">
-              {error || socialError}
+              {error}
             </Alert>
           )}
 
@@ -179,13 +124,13 @@ export function SignUpForm() {
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? 'Creating account...' : 'Create account'}
+            {isLoading ? 'Resetting password...' : 'Reset password'}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
-          Already have an account?{' '}
+          Remember your password?{' '}
           <a href="/login" className="text-primary hover:underline">
             Sign in
           </a>
