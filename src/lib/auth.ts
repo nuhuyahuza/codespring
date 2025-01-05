@@ -58,5 +58,5 @@ export async function login(email: string, password: string): Promise<Response> 
     throw new Error(error.message || 'Login failed');
   }
 
-  return response.json();
+  return response;
 } 
