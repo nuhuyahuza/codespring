@@ -42,6 +42,7 @@ model User {
   reviews         Review[]
   messages        Message[]
   groups          GroupMember[]
+  lessonProgress  LessonProgress[]
 
   @@map("users")
 }
@@ -173,6 +174,23 @@ model Lesson {
 
   // Relations
   course    Course   @relation(fields: [courseId], references: [id])
+  progress  LessonProgress[]
 
   @@map("lessons")
+}
+
+model LessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
 }

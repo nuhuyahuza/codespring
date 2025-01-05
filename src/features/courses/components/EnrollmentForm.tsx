@@ -8,8 +8,10 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { PaymentForm } from '@/features/payment/components/PaymentForm';
 import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface EnrollmentFormProps {
   course: {
@@ -24,38 +26,55 @@ interface EnrollmentFormProps {
 }
 
 export function EnrollmentForm({ course }: EnrollmentFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleEnroll = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          courseId: course.id,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to enroll in course');
-      }
-
-      // Redirect to course content or dashboard
-      navigate(`/courses/${course.id}/learn`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
+  const handlePaymentSuccess = () => {
+    navigate(`/courses/${course.id}/learn`);
   };
+
+  const handlePaymentError = (error: string) => {
+    setError(error);
+  };
+
+  if (!user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sign in Required</CardTitle>
+          <CardDescription>
+            Please sign in to enroll in this course
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            You need to have an account and be signed in to enroll in courses.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <div className="flex flex-col w-full gap-4">
+            <button
+              onClick={() => navigate('/login', {
+                state: { from: `/courses/${course.id}/enroll` }
+              })}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 rounded-md"
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => navigate('/signup', {
+                state: { from: `/courses/${course.id}/enroll` }
+              })}
+              className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2 rounded-md"
+            >
+              Create account
+            </button>
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -85,30 +104,17 @@ export function EnrollmentForm({ course }: EnrollmentFormProps) {
           </p>
         </div>
         {error && (
-          <p className="text-sm text-destructive">
+          <Alert variant="destructive">
             {error}
-          </p>
+          </Alert>
         )}
+        <PaymentForm
+          courseId={course.id}
+          amount={course.price}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+        />
       </CardContent>
-      <CardFooter>
-        <div className="flex flex-col w-full gap-4">
-          <Button
-            onClick={handleEnroll}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Processing...' : `Enroll for ${formatCurrency(course.price)}`}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/courses')}
-            disabled={isLoading}
-            className="w-full"
-          >
-            Cancel
-          </Button>
-        </div>
-      </CardFooter>
     </Card>
   );
 } 
