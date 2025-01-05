@@ -194,3 +194,42 @@ model LessonProgress {
   @@unique([userId, lessonId])
   @@map("lesson_progress")
 }
+
+model SystemSettings {
+  id                    Int      @id @default(1)
+  siteName             String   @default("CodeSpring")
+  siteDescription      String   @default("Online Learning Platform")
+  maintenanceMode      Boolean  @default(false)
+  allowRegistration    Boolean  @default(true)
+  defaultUserRole      String   @default("STUDENT")
+  emailProvider        String   @default("SMTP")
+  fromEmail           String   @default("noreply@codespring.com")
+  smtpHost            String?
+  smtpPort            Int?
+  smtpUsername        String?
+  smtpPassword        String?
+  emailApiKey         String?
+  emailNotifications  Boolean  @default(true)
+  pushNotifications   Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  sessionTimeout      Int      @default(30)
+  maxLoginAttempts    Int      @default(5)
+  passwordMinLength   Int      @default(8)
+  requirePasswordReset Int      @default(90)
+  twoFactorAuth       Boolean  @default(false)
+  currency            String   @default("USD")
+  stripeEnabled       Boolean  @default(true)
+  paypalEnabled       Boolean  @default(false)
+  stripePublicKey     String?
+  stripeSecretKey     String?
+  paypalClientId      String?
+  paypalSecretKey     String?
+  storageProvider     String   @default("S3")
+  maxFileSize         Int      @default(50)
+  s3Bucket            String?
+  s3Region            String?
+  s3AccessKey         String?
+  s3SecretKey         String?
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+}
