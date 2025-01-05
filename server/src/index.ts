@@ -3,6 +3,7 @@ import * as cors from 'cors';
 import * as dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.js';
+import coursesRoutes from './routes/courses.js';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/courses', coursesRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -24,7 +26,11 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  res.status(500).json({ 
+    error: 'Something went wrong!',
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
   next(err);
 });
 

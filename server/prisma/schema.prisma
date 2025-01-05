@@ -8,15 +8,30 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   password      String
   name          String
-  role          Role      @default(STUDENT)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          Role       @default(STUDENT)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   resetToken    String?
   resetTokenExp DateTime?
+  courses       Course[]   @relation("InstructorCourses")
+  enrollments   Course[]   @relation("StudentEnrollments")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  price       Float
+  imageUrl    String?
+  instructor  User     @relation("InstructorCourses", fields: [instructorId], references: [id])
+  instructorId String
+  students    User[]   @relation("StudentEnrollments")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Role {

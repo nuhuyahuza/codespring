@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -41,8 +38,12 @@ model User {
   courses         Course[]      @relation("CourseInstructor")
   reviews         Review[]
   messages        Message[]
-  groups          GroupMember[]
   lessonProgress  LessonProgress[]
+  submissions     Submission[]  @relation("submissions")
+  gradedSubmissions Submission[]  @relation("gradedSubmissions")
+  chatMessages    ChatMessage[]
+  groupMemberships GroupMember[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -67,6 +68,7 @@ model Course {
   sessions     Session[]
   reviews      Review[]
   groups       Group[]
+  submissions  Submission[]
 
   @@map("courses")
 }
@@ -118,32 +120,35 @@ model Message {
 }
 
 model Group {
-  id        String   @id @default(cuid())
-  name      String
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String        @id @default(cuid())
+  name        String
+  description String?       @db.Text
+  courseId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
-  course    Course        @relation(fields: [courseId], references: [id])
-  members   GroupMember[]
-  messages  Message[]
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  messages    Message[]
 
-  @@map("groups")
+  @@index([courseId])
 }
 
 model GroupMember {
   id        String   @id @default(cuid())
   userId    String
   groupId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      String   @default("MEMBER") // OWNER, ADMIN, MEMBER
+  joinedAt  DateTime @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  group     Group    @relation(fields: [groupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@map("group_members")
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
 }
 
 model Review {
@@ -175,6 +180,7 @@ model Lesson {
   // Relations
   course    Course   @relation(fields: [courseId], references: [id])
   progress  LessonProgress[]
+  submissions  Submission[]
 
   @@map("lessons")
 }
@@ -212,4 +218,59 @@ model SystemSettings {
   // Timestamps
   updatedAt           DateTime @updatedAt
   createdAt           DateTime @default(now())
+}
+
+model Submission {
+  id          String      @id @default(cuid())
+  courseId    String
+  lessonId    String
+  userId      String
+  content     String      @db.Text
+  attachments Json?       // Array of { name: string, url: string }
+  status      String      @default("PENDING") // PENDING, GRADED
+  score       Float?
+  feedback    String?     @db.Text
+  submittedAt DateTime    @default(now())
+  gradedAt    DateTime?
+  gradedById  String?
+  
+  // Relations
+  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson      Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User        @relation("submissions", fields: [userId], references: [id], onDelete: Cascade)
+  gradedBy    User?       @relation("gradedSubmissions", fields: [gradedById], references: [id])
+
+  @@index([courseId])
+  @@index([lessonId])
+  @@index([userId])
+  @@index([gradedById])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // CHAT_MESSAGE, ASSIGNMENT_GRADED, etc.
+  title     String
+  content   String   @db.Text
+  metadata  Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
