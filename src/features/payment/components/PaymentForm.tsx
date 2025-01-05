@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { usePayment } from '../context/PaymentContext';
@@ -30,6 +29,7 @@ export function PaymentForm({ courseId, amount, onSuccess, onError }: PaymentFor
 
       // Create payment intent
       const { clientSecret } = await createPaymentIntent(amount, courseId);
+	  console.log(clientSecret);
 
       // Confirm card payment
       const cardElement = elements.getElement(CardElement);

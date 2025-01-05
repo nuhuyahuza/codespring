@@ -1,44 +1,62 @@
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+import { jwtDecode } from 'jwt-decode';
+import { prisma } from './prisma';
 
-const prisma = new PrismaClient();
+export interface User {
+  id: string;
+  email: string;
+  role: string;
+  name?: string;
+  image?: string;
+}
 
-interface JwtPayload {
+export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  exp: number;
 }
 
-export async function verifyAuth(req: Request) {
+export async function verifyToken(token: string): Promise<User | null> {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const decoded = jwtDecode<JWTPayload>(token);
+    
+    // Check if token is expired
+    if (decoded.exp * 1000 < Date.now()) {
       return null;
     }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(
-      token,
-      process.env.NEXTAUTH_SECRET || 'your-secret-key-here'
-    ) as JwtPayload;
 
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-      },
+      where: { id: decoded.userId }
     });
 
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name || undefined,
+      image: user.image || undefined
+    };
   } catch (error) {
-    console.error('Auth verification failed:', error);
+    console.error('Token verification failed:', error);
     return null;
   }
+}
+
+export async function login(email: string, password: string): Promise<Response> {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Login failed');
+  }
+
+  return response.json();
 } 

@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { verifyAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { courseId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await verifyAuth(request, 'INSTRUCTOR');
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const course = await prisma.course.findUnique({
       where: {
         id: params.courseId,
-        instructorId: session.user.id,
+        instructorId: user.id,
       },
       include: {
         sections: {
@@ -49,8 +48,8 @@ export async function PUT(
   { params }: { params: { courseId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await verifyAuth(request, 'INSTRUCTOR');
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -59,7 +58,7 @@ export async function PUT(
     const course = await prisma.course.update({
       where: {
         id: params.courseId,
-        instructorId: session.user.id,
+        instructorId: user.id,
       },
       data: {
         title: data.title,
@@ -98,15 +97,15 @@ export async function DELETE(
   { params }: { params: { courseId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await verifyAuth(request, 'INSTRUCTOR');
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await prisma.course.delete({
       where: {
         id: params.courseId,
-        instructorId: session.user.id,
+        instructorId: user.id,
       },
     });
 

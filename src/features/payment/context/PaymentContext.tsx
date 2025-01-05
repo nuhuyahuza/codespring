@@ -1,8 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-
-const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY || '');
+import { createContext, useContext } from 'react';
 
 interface PaymentContextType {
   createPaymentIntent: (amount: number, courseId: string) => Promise<{ clientSecret: string }>;
@@ -11,24 +7,18 @@ interface PaymentContextType {
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
 
-interface PaymentProviderProps {
-  children: ReactNode;
-}
-
-export function PaymentProvider({ children }: PaymentProviderProps) {
+export function PaymentProvider({ children }: { children: React.ReactNode }) {
   const createPaymentIntent = async (amount: number, courseId: string) => {
     const response = await fetch('/api/payments/create-intent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ amount, courseId }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to create payment intent');
+      throw new Error('Failed to create payment intent');
     }
 
     return response.json();
@@ -39,25 +29,18 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ paymentMethodId, courseId }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to process payment');
+      throw new Error('Payment processing failed');
     }
   };
 
-  const value = {
-    createPaymentIntent,
-    processPayment,
-  };
-
   return (
-    <PaymentContext.Provider value={value}>
-      <Elements stripe={stripePromise}>{children}</Elements>
+    <PaymentContext.Provider value={{ createPaymentIntent, processPayment }}>
+      {children}
     </PaymentContext.Provider>
   );
 }

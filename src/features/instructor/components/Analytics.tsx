@@ -99,7 +99,7 @@ export function Analytics({ data, type }: AnalyticsProps) {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis
-                  tickFormatter={(value) => formatCurrency(value)}
+                  tickFormatter={(value: number) => formatCurrency(value)}
                 />
                 <Tooltip
                   formatter={(value: number) => [

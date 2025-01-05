@@ -1,41 +1,55 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
-interface SystemSettings {
+export interface SystemSettings {
   id: number;
-  siteName: string;
-  siteDescription: string;
-  maintenanceMode: boolean;
-  allowRegistration: boolean;
-  defaultUserRole: string;
-  emailProvider: string;
-  fromEmail: string;
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpUsername?: string;
-  smtpPassword?: string;
-  emailApiKey?: string;
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  smsNotifications: boolean;
-  sessionTimeout: number;
-  maxLoginAttempts: number;
-  passwordMinLength: number;
-  requirePasswordReset: number;
-  twoFactorAuth: boolean;
-  currency: string;
-  stripeEnabled: boolean;
-  paypalEnabled: boolean;
-  stripePublicKey?: string;
-  stripeSecretKey?: string;
-  paypalClientId?: string;
-  paypalSecretKey?: string;
-  storageProvider: string;
-  maxFileSize: number;
-  s3Bucket?: string;
-  s3Region?: string;
-  s3AccessKey?: string;
-  s3SecretKey?: string;
+  general: {
+    siteName: string;
+    siteDescription: string;
+    maintenanceMode: boolean;
+    allowRegistration: boolean;
+    defaultUserRole: 'STUDENT' | 'INSTRUCTOR';
+  };
+  email: {
+    provider: 'SMTP' | 'SES' | 'SENDGRID';
+    fromEmail: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUsername?: string;
+    smtpPassword?: string;
+    apiKey?: string;
+  };
+  notifications: {
+    enableEmailNotifications: boolean;
+    enablePushNotifications: boolean;
+    enableSMSNotifications: boolean;
+    defaultNotificationTypes: string[];
+  };
+  security: {
+    sessionTimeout: number;
+    maxLoginAttempts: number;
+    passwordMinLength: number;
+    requirePasswordReset: number;
+    twoFactorAuth: boolean;
+  };
+  payment: {
+    currency: string;
+    stripeEnabled: boolean;
+    paypalEnabled: boolean;
+    stripePublicKey?: string;
+    stripeSecretKey?: string;
+    paypalClientId?: string;
+    paypalSecretKey?: string;
+  };
+  storage: {
+    provider: 'LOCAL' | 'S3' | 'CLOUDINARY';
+    maxFileSize: number;
+    allowedFileTypes: string[];
+    s3Bucket?: string;
+    s3Region?: string;
+    s3AccessKey?: string;
+    s3SecretKey?: string;
+  };
   updatedAt: string;
   createdAt: string;
 }

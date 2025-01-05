@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import { prisma } from '@/server/db';
-import { authenticateUser } from '@/server/middleware/auth';
-import { Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
+import { prisma } from '@/lib/prisma';
+import { authenticateUser } from '@/lib/auth-middleware';
 import { calculateProgress } from '@/server/utils/progress';
+import type { Course, Enrollment, LiveSession, Review, User } from '@prisma/client';
 
 const router = Router();
 
@@ -89,7 +89,7 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
     const revenueByDay = new Map<string, number>();
     const ratingsByDay = new Map<string, { sum: number; count: number }>();
 
-    enrollments.forEach((enrollment) => {
+    enrollments.forEach((enrollment: Enrollment) => {
       const date = enrollment.createdAt.toISOString().split('T')[0];
       enrollmentsByDay.set(date, (enrollmentsByDay.get(date) || 0) + 1);
       revenueByDay.set(
@@ -98,8 +98,8 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
       );
     });
 
-    courses.forEach((course) => {
-      course.reviews.forEach((review) => {
+    courses.forEach((course: Course & { reviews: Review[] }) => {
+      course.reviews.forEach((review: Review) => {
         const date = review.createdAt.toISOString().split('T')[0];
         const existing = ratingsByDay.get(date) || { sum: 0, count: 0 };
         ratingsByDay.set(date, {
@@ -111,26 +111,26 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
 
     // Calculate total revenue
     const totalRevenue = Array.from(revenueByDay.values()).reduce(
-      (sum, amount) => sum + amount,
+      (sum: number, amount: number) => sum + amount,
       0
     );
 
     // Calculate revenue this month
     const revenueThisMonth = enrollments
-      .filter((e) => e.createdAt >= startOfMonth)
-      .reduce((sum, e) => sum + (e.amountPaid || 0), 0);
+      .filter((e: Enrollment) => e.createdAt >= startOfMonth)
+      .reduce((sum: number, e: Enrollment) => sum + (e.amountPaid || 0), 0);
 
     const dashboardData = {
       totalCourses: courses.length,
-      activeCourses: courses.filter((c) => c.status === 'PUBLISHED').length,
+      activeCourses: courses.filter((c: Course) => c.status === 'PUBLISHED').length,
       totalStudents: students.length,
-      newStudentsThisMonth: enrollments.filter((e) => e.createdAt >= startOfMonth)
+      newStudentsThisMonth: enrollments.filter((e: Enrollment) => e.createdAt >= startOfMonth)
         .length,
-      upcomingSessions: sessions.filter((s) => s.startTime <= sevenDaysFromNow)
+      upcomingSessions: sessions.filter((s: LiveSession) => s.startTime <= sevenDaysFromNow)
         .length,
       totalRevenue,
       revenueThisMonth,
-      courses: courses.map((course) => ({
+      courses: courses.map((course: Course & { reviews: Review[]; enrollments: Enrollment[] }) => ({
         id: course.id,
         title: course.title,
         thumbnail: course.thumbnail,
@@ -138,12 +138,12 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
         price: course.price,
         enrollmentCount: course.enrollments.length,
         rating:
-          course.reviews.reduce((sum, review) => sum + review.rating, 0) /
+          course.reviews.reduce((sum: number, review: Review) => sum + review.rating, 0) /
             course.reviews.length || 0,
         status: course.status,
         lastUpdated: course.updatedAt.toISOString(),
       })),
-      sessions: sessions.map((session) => ({
+      sessions: sessions.map((session: LiveSession & { course: Course; enrollments: Enrollment[] }) => ({
         id: session.id,
         courseTitle: session.course.title,
         startTime: session.startTime.toISOString(),
@@ -151,14 +151,14 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
         enrolledStudents: session.enrollments.length,
         status: session.status,
       })),
-      students: students.map((student) => ({
+      students: students.map((student: User & { enrollments: Array<Enrollment & { progress: any }> }) => ({
         id: student.id,
         name: `${student.firstName} ${student.lastName}`,
         email: student.email,
         enrolledCourses: student.enrollments.length,
         averageProgress:
           student.enrollments.reduce(
-            (sum, enrollment) => sum + calculateProgress(enrollment.progress),
+            (sum: number, enrollment: Enrollment & { progress: any }) => sum + calculateProgress(enrollment.progress),
             0
           ) / student.enrollments.length,
         lastActive: student.lastActiveAt.toISOString(),
@@ -202,4 +202,4 @@ router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, r
   }
 });
 
-export default router; 
+export default router;

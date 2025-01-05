@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { prisma } from '@/server/db';
-import { authenticateUser } from '@/server/middleware/auth';
+import { prisma } from '@/lib/prisma';
+import { authenticateUser } from '@/lib/auth';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 

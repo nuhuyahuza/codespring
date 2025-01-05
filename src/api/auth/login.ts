@@ -48,14 +48,15 @@ export async function POST(req: Request) {
         email: user.email,
         role: user.role,
       },
-      process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
+      process.env.SECRET || 'your-secret-key-here',
       {
         expiresIn: validatedData.rememberMe ? '30d' : '24h',
       }
     );
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const { password, ...userWithoutPassword } = user;
+	console.log(password);
 
     return new Response(
       JSON.stringify({
