@@ -23,11 +23,23 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/features/auth/*": ["./src/features/auth/*"],
+      "@/features/courses/*": ["./src/features/courses/*"],
+      "@/features/instructor/*": ["./src/features/instructor/*"],
+      "@/features/payment/*": ["./src/features/payment/*"]
     },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -135,7 +135,7 @@ export function Analytics({ data, type }: AnalyticsProps) {
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    tickFormatter={(value) => `${value} reviews`}
+                    tickFormatter={(value: number) => `${value} reviews`}
                   />
                   <Tooltip />
                   <Legend />

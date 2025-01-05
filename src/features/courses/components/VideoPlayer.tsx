@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import ReactPlayer from 'react-player';
+import ReactPlayer from 'react-player/lazy';
 
 interface VideoPlayerProps {
   url: string;
@@ -45,4 +45,4 @@ export function VideoPlayer({ url, onComplete }: VideoPlayerProps) {
       />
     </div>
   );
-} 
+}

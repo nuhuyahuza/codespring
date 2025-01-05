@@ -8,18 +8,23 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/features/auth/*": ["./src/features/auth/*"],
+      "@/features/courses/*": ["./src/features/courses/*"],
+      "@/features/instructor/*": ["./src/features/instructor/*"],
+      "@/features/payment/*": ["./src/features/payment/*"]
     },
-    "esModuleInterop": true,
     "target": "ESNext",
-    "lib": ["ESNext"]
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx"
   },
   "include": [
     "vite.config.ts",
-    "src/server/**/*.ts",
-    "src/lib/**/*.ts",
-    "src/types/**/*.ts",
-    "src/components/**/*.ts",
-    "src/components/**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }
+

@@ -15,6 +15,7 @@ app.use(authRoutes);
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
+  console.log(next)
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
