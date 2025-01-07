@@ -31,7 +31,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Health Check Route
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+  });
+});
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/submissions', submissionRoutes);
@@ -39,6 +49,14 @@ app.use('/api/groups', groupRoutes);
 
 // Setup WebSocket chat server
 setupChatServer(io);
+
+// 404 Handler
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
+});
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
