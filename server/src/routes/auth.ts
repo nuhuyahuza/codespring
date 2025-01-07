@@ -1,7 +1,7 @@
-import * as express from 'express';
-import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
+import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,15 +9,17 @@ const prisma = new PrismaClient();
 // Sign up
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { name, email, password, role = 'STUDENT' } = req.body;
+
+    // Validate role
+    if (!['STUDENT', 'INSTRUCTOR'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     // Hash password
@@ -26,23 +28,34 @@ router.post('/signup', async (req, res) => {
     // Create user
     const user = await prisma.user.create({
       data: {
+        name,
         email,
         password: hashedPassword,
-        name
-      }
+        role,
+      },
     });
 
     // Generate token
     const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '1d' }
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
     );
 
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.status(201).json({ 
+      token, 
+      user: userWithoutPassword
+    });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Error creating user' });
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to create user' });
+    }
   }
 });
 
@@ -52,31 +65,48 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email }
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true
+      }
     });
 
     if (!user) {
-      return res.status(400).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check password
+    // Verify password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(400).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate token
     const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '1d' }
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
     );
 
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({ 
+      token, 
+      user: userWithoutPassword
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Error logging in' });
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to login' });
+    }
   }
 });
 

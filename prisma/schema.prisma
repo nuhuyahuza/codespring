@@ -10,42 +10,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  INSTRUCTOR
-  STUDENT
-}
-
 model User {
-  id              String    @id @default(cuid())
-  name            String
-  email           String    @unique
-  password        String?
-  role            UserRole  @default(STUDENT)
-  emailVerified   DateTime?
-  image           String?
-  resetToken      String?   @unique
-  resetTokenExpiry DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  // OAuth providers
-  googleId        String?   @unique
-  facebookId      String?   @unique
-
+  id            String     @id @default(cuid())
+  email         String     @unique
+  password      String
+  name          String
+  role          Role       @default(STUDENT)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  resetToken    String?
+  resetTokenExp DateTime?
+  
   // Relations
-  enrollments     Enrollment[]
-  courses         Course[]      @relation("CourseInstructor")
-  reviews         Review[]
-  messages        Message[]
-  lessonProgress  LessonProgress[]
-  submissions     Submission[]  @relation("submissions")
-  gradedSubmissions Submission[]  @relation("gradedSubmissions")
-  chatMessages    ChatMessage[]
-  groupMemberships GroupMember[]
-  notifications   Notification[]
-
-  @@map("users")
+  taughtCourses Course[]  @relation("InstructorCourses")
+  enrollments   Enrollment[]
 }
 
 model Course {
@@ -53,224 +31,34 @@ model Course {
   title       String
   description String   @db.Text
   price       Float
-  duration    Int      // in minutes
-  difficulty  String
-  tags        String?  // JSON array of tags
-  thumbnail   String?
+  duration    Int      @default(0)
+  imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  
   // Relations
+  instructor  User     @relation("InstructorCourses", fields: [instructorId], references: [id])
   instructorId String
-  instructor   User          @relation("CourseInstructor", fields: [instructorId], references: [id])
-  enrollments  Enrollment[]
-  lessons      Lesson[]
-  sessions     Session[]
-  reviews      Review[]
-  groups       Group[]
-  submissions  Submission[]
-
-  @@map("courses")
+  enrollments Enrollment[]
 }
 
 model Enrollment {
   id            String   @id @default(cuid())
-  userId        String
-  courseId      String
-  paymentStatus String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
-  // Relations
-  user    User    @relation(fields: [userId], references: [id])
-  course  Course  @relation(fields: [courseId], references: [id])
-
-  @@map("enrollments")
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  title     String
-  startTime DateTime
-  duration  Int      // in minutes
-  link      String
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  course    Course   @relation(fields: [courseId], references: [id])
-
-  @@map("sessions")
-}
-
-model Message {
-  id         String   @id @default(cuid())
-  content    String   @db.Text
-  userId     String
-  groupId    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  group     Group    @relation(fields: [groupId], references: [id])
-
-  @@map("messages")
-}
-
-model Group {
-  id          String        @id @default(cuid())
-  name        String
-  description String?       @db.Text
-  courseId    String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Relations
-  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  members     GroupMember[]
-  messages    Message[]
-
-  @@index([courseId])
-}
-
-model GroupMember {
-  id        String   @id @default(cuid())
-  userId    String
-  groupId   String
-  role      String   @default("MEMBER") // OWNER, ADMIN, MEMBER
-  joinedAt  DateTime @default(now())
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, groupId])
-  @@index([userId])
-  @@index([groupId])
-}
-
-model Review {
-  id        String   @id @default(cuid())
-  rating    Int
-  comment   String?  @db.Text
-  userId    String
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  course    Course   @relation(fields: [courseId], references: [id])
-
-  @@map("reviews")
-}
-
-model Lesson {
-  id        String   @id @default(cuid())
-  title     String
-  videoUrl  String?
-  content   String?  @db.Text
-  order     Int
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  course    Course   @relation(fields: [courseId], references: [id])
-  progress  LessonProgress[]
-  submissions  Submission[]
-
-  @@map("lessons")
-}
-
-model LessonProgress {
-  id        String   @id @default(cuid())
-  userId    String
-  lessonId  String
-  completed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
-
-  @@unique([userId, lessonId])
-  @@map("lesson_progress")
-}
-
-model SystemSettings {
-  id                    Int      @id @default(1)
-  // General settings
-  general               Json     @default("{\"siteName\":\"CodeSpring\",\"siteDescription\":\"Online Learning Platform\",\"maintenanceMode\":false,\"allowRegistration\":true,\"defaultUserRole\":\"STUDENT\"}")
-  // Email settings
-  email                Json     @default("{\"provider\":\"SMTP\",\"fromEmail\":\"noreply@codespring.com\",\"smtpHost\":null,\"smtpPort\":null,\"smtpUsername\":null,\"smtpPassword\":null,\"apiKey\":null}")
-  // Notification settings
-  notifications        Json     @default("{\"enableEmailNotifications\":true,\"enablePushNotifications\":true,\"enableSMSNotifications\":false,\"defaultNotificationTypes\":[\"course_updates\",\"assignments\",\"messages\",\"announcements\"]}")
-  // Security settings
-  security            Json     @default("{\"sessionTimeout\":30,\"maxLoginAttempts\":5,\"passwordMinLength\":8,\"requirePasswordReset\":90,\"twoFactorAuth\":false}")
-  // Payment settings
-  payment             Json     @default("{\"currency\":\"USD\",\"stripeEnabled\":true,\"paypalEnabled\":false,\"stripePublicKey\":null,\"stripeSecretKey\":null,\"paypalClientId\":null,\"paypalSecretKey\":null}")
-  // Storage settings
-  storage             Json     @default("{\"provider\":\"S3\",\"maxFileSize\":50,\"allowedFileTypes\":[\"image/*\",\"video/*\",\"application/pdf\"],\"s3Bucket\":null,\"s3Region\":null,\"s3AccessKey\":null,\"s3SecretKey\":null}")
-  // Timestamps
-  updatedAt           DateTime @updatedAt
-  createdAt           DateTime @default(now())
-}
-
-model Submission {
-  id          String      @id @default(cuid())
-  courseId    String
-  lessonId    String
-  userId      String
-  content     String      @db.Text
-  attachments Json?       // Array of { name: string, url: string }
-  status      String      @default("PENDING") // PENDING, GRADED
-  score       Float?
-  feedback    String?     @db.Text
-  submittedAt DateTime    @default(now())
-  gradedAt    DateTime?
-  gradedById  String?
+  paymentStatus String   @default("PENDING")
   
   // Relations
-  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lesson      Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user        User        @relation("submissions", fields: [userId], references: [id], onDelete: Cascade)
-  gradedBy    User?       @relation("gradedSubmissions", fields: [gradedById], references: [id])
+  user        User    @relation(fields: [userId], references: [id])
+  userId      String
+  course      Course  @relation(fields: [courseId], references: [id])
+  courseId    String
 
-  @@index([courseId])
-  @@index([lessonId])
-  @@index([userId])
-  @@index([gradedById])
+  @@unique([userId, courseId])
 }
 
-model ChatMessage {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String   // CHAT_MESSAGE, ASSIGNMENT_GRADED, etc.
-  title     String
-  content   String   @db.Text
-  metadata  Json?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
 }

@@ -1,49 +1,72 @@
-import * as express from 'express';
-import * as cors from 'cors';
-import * as dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/auth.js';
-import coursesRoutes from './routes/courses.js';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth';
+import courseRoutes from './routes/courses';
+import submissionRoutes from './routes/submissions';
+import groupRoutes from './routes/groups';
+import { setupChatServer } from './websocket/chat';
 
 dotenv.config();
 
-const app = express.default();
-const prisma = new PrismaClient();
-const port = process.env.PORT || 5000;
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
 
-app.use(cors.default());
+const prisma = new PrismaClient();
+
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/courses', coursesRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/groups', groupRoutes);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+// Setup WebSocket chat server
+setupChatServer(io);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Something went wrong!',
     message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   });
-  next(err);
 });
 
-const startServer = async () => {
+const PORT = process.env.PORT || 5000;
+
+// Connect to database and start server
+async function startServer() {
   try {
+    // Test database connection
     await prisma.$connect();
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
+    console.log('Database connection established');
+
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`WebSocket server is ready`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
-};
+}
 
 startServer(); 
