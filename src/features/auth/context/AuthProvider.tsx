@@ -1,30 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  role: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
-  error: string | null;
-}
-
-const defaultContext: AuthContextType = {
-  user: null,
-  login: async () => { throw new Error('Not implemented') },
-  logout: () => { throw new Error('Not implemented') },
-  isLoading: false,
-  error: null,
-};
-
-export const AuthContext = createContext<AuthContextType>(defaultContext);
+import { AuthContext, User } from './AuthContext';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -37,7 +13,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const decoded = jwtDecode<User>(token);
         setUser(decoded);
-      } catch (err) {
+      } catch {
         localStorage.removeItem('token');
       }
     }
@@ -76,12 +52,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 } 

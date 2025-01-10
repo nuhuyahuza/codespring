@@ -11,7 +11,7 @@ import {
 import { Alert } from '@/components/ui/alert';
 import { PaymentForm } from '@/features/payment/components/PaymentForm';
 import { formatCurrency } from '@/lib/utils';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 interface EnrollmentFormProps {
   course: {
