@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LandingPage } from "@/pages/LandingPage";
 import { CoursesPage } from "@/pages/courses";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -29,7 +30,7 @@ function App() {
       <Providers>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<CoursesPage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

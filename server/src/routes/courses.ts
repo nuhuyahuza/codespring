@@ -6,19 +6,39 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all courses
-router.get('/', async (req, res) => {
+router.get('/api/courses', async (req, res) => {
   try {
+    const { featured } = req.query;
+    
     const courses = await prisma.course.findMany({
+      where: featured === 'true' ? {
+        // Add conditions for featured courses (e.g., high enrollment, rating)
+        published: true,
+      } : {
+        published: true,
+      },
+      take: featured === 'true' ? 3 : undefined, // Limit to 3 courses if featured
+      orderBy: featured === 'true' ? {
+        enrollments: {
+          _count: 'desc'
+        }
+      } : {
+        createdAt: 'desc'
+      },
       include: {
         instructor: {
           select: {
-            id: true,
             name: true,
-            email: true,
+          },
+        },
+        _count: {
+          select: {
+            enrollments: true,
           },
         },
       },
     });
+
     res.json(courses);
   } catch (error) {
     console.error('Error fetching courses:', error);
