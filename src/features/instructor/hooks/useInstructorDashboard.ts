@@ -79,7 +79,7 @@ export function useInstructorDashboard() {
 
       try {
         const response = await api.get<DashboardData>('/api/instructor/dashboard');
-        setDashboard(response.data);
+        setDashboard(response);
         setError(null);
       } catch (err) {
         setError('Failed to load dashboard data');

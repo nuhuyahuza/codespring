@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import courseRoutes from './routes/courses';
 import submissionRoutes from './routes/submissions';
 import groupRoutes from './routes/groups';
+import studentRoutes from './routes/student';
 import { setupChatServer } from './websocket/chat';
 
 dotenv.config();
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api', studentRoutes);
 
 // Setup WebSocket chat server
 setupChatServer(io);

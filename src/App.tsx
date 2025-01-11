@@ -12,8 +12,10 @@ import { StudentDashboardPage } from "@/pages/StudentDashboardPage";
 import { InstructorDashboardPage } from "@/pages/InstructorDashboardPage";
 import { CreateCoursePage } from "@/pages/CreateCoursePage";
 import { EditCoursePage } from "@/pages/EditCoursePage";
+import { DashboardRedirect } from "@/pages/DashboardRedirect";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Providers } from "@/components/providers";
+import { CourseContentPage } from "@/pages/CourseContentPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +39,18 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/courses" element={<CoursesPage />} />
 
+          {/* Dashboard Redirect */}
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+
           {/* Protected Student Routes */}
+          <Route
+            path="/courses/:courseId"
+            element={
+              <ProtectedRoute>
+                <CourseContentPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/courses/:courseId/enroll"
             element={

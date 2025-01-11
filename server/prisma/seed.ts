@@ -1,232 +1,209 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, Role } from '@prisma/client';
+import bcryptjs from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  try {
-    // Clean up existing data
-    await prisma.message.deleteMany();
-    await prisma.groupMember.deleteMany();
-    await prisma.group.deleteMany();
-    await prisma.submission.deleteMany();
-    await prisma.lesson.deleteMany();
-    await prisma.course.deleteMany();
-    await prisma.user.deleteMany();
+  // Clean up existing data
+  await prisma.message.deleteMany();
+  await prisma.groupMember.deleteMany();
+  await prisma.group.deleteMany();
+  await prisma.submission.deleteMany();
+  await prisma.lesson.deleteMany();
+  await prisma.enrollment.deleteMany();
+  await prisma.course.deleteMany();
+  await prisma.user.deleteMany();
 
-    // Create users
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    const admin = await prisma.user.create({
+  // Create users
+  const adminPassword = await bcryptjs.hash('admin123', 10);
+  const admin = await prisma.user.create({
+    data: {
+      email: 'admin@codespring.com',
+      name: 'Admin User',
+      password: adminPassword,
+      role: Role.ADMIN,
+    },
+  });
+
+  const instructorPassword = await bcryptjs.hash('instructor123', 10);
+  const instructor = await prisma.user.create({
+    data: {
+      email: 'instructor@codespring.com',
+      name: 'John Smith',
+      password: instructorPassword,
+      role: Role.INSTRUCTOR,
+    },
+  });
+
+  const studentPassword = await bcryptjs.hash('student123', 10);
+  const student = await prisma.user.create({
+    data: {
+      email: 'student@codespring.com',
+      name: 'Jane Doe',
+      password: studentPassword,
+      role: Role.STUDENT,
+    },
+  });
+
+  // Create courses
+  const webDevCourse = await prisma.course.create({
+    data: {
+      title: 'Web Development Fundamentals',
+      description: 'Learn the basics of HTML, CSS, and JavaScript to build modern websites.',
+      price: 49.99,
+      instructorId: instructor.id,
+    },
+  });
+
+  const reactCourse = await prisma.course.create({
+    data: {
+      title: 'React.js Mastery',
+      description: 'Master React.js and build powerful web applications.',
+      price: 79.99,
+      instructorId: instructor.id,
+    },
+  });
+
+  // Create lessons for Web Development course
+  const webDevLessons = await Promise.all([
+    prisma.lesson.create({
       data: {
-        name: 'Admin User',
-        email: 'admin@codespring.com',
-        password: adminPassword,
-        role: 'ADMIN',
-      },
-    });
-
-    const instructorPassword = await bcrypt.hash('instructor123', 10);
-    const instructor = await prisma.user.create({
-      data: {
-        name: 'John Doe',
-        email: 'instructor@codespring.com',
-        password: instructorPassword,
-        role: 'INSTRUCTOR',
-      },
-    });
-
-    const studentPassword = await bcrypt.hash('student123', 10);
-    const student = await prisma.user.create({
-      data: {
-        name: 'Jane Smith',
-        email: 'student@codespring.com',
-        password: studentPassword,
-        role: 'STUDENT',
-      },
-    });
-
-    // Create courses
-    const webDevCourse = await prisma.course.create({
-      data: {
-        title: 'Introduction to Web Development',
-        description: 'Learn the basics of HTML, CSS, and JavaScript to build modern websites.',
-        price: 49.99,
-        imageUrl: '/courses/web-dev-intro.jpg',
-        instructorId: instructor.id,
-      },
-    });
-
-    const reactCourse = await prisma.course.create({
-      data: {
-        title: 'React.js Fundamentals',
-        description: 'Master React.js and build powerful web applications.',
-        price: 79.99,
-        imageUrl: '/courses/react-fundamentals.jpg',
-        instructorId: instructor.id,
-      },
-    });
-
-    // Create lessons
-    const webDevLessons = await Promise.all([
-      prisma.lesson.create({
-        data: {
-          title: 'HTML Fundamentals',
-          content: 'Learn the basic structure of HTML documents.',
-          order: 1,
-          courseId: webDevCourse.id,
-        },
-      }),
-      prisma.lesson.create({
-        data: {
-          title: 'CSS Styling',
-          content: 'Master CSS styling techniques.',
-          order: 2,
-          courseId: webDevCourse.id,
-        },
-      }),
-      prisma.lesson.create({
-        data: {
-          title: 'JavaScript Basics',
-          content: 'Introduction to JavaScript programming.',
-          order: 3,
-          courseId: webDevCourse.id,
-        },
-      }),
-    ]);
-
-    const reactLessons = await Promise.all([
-      prisma.lesson.create({
-        data: {
-          title: 'React Components',
-          content: 'Understanding React components and props.',
-          order: 1,
-          courseId: reactCourse.id,
-        },
-      }),
-      prisma.lesson.create({
-        data: {
-          title: 'State Management',
-          content: 'Managing state in React applications.',
-          order: 2,
-          courseId: reactCourse.id,
-        },
-      }),
-      prisma.lesson.create({
-        data: {
-          title: 'Hooks',
-          content: 'Using React hooks effectively.',
-          order: 3,
-          courseId: reactCourse.id,
-        },
-      }),
-    ]);
-
-    // Create groups
-    const webDevGroup = await prisma.group.create({
-      data: {
-        name: 'Web Dev Discussion',
-        description: 'General discussion about web development',
+        title: 'Introduction to HTML',
+        content: 'Learn the basics of HTML and document structure.',
+        videoUrl: 'https://example.com/videos/html-intro',
+        order: 1,
         courseId: webDevCourse.id,
       },
-    });
-
-    const reactGroup = await prisma.group.create({
+    }),
+    prisma.lesson.create({
       data: {
-        name: 'React Learning Community',
-        description: 'Discuss React concepts and best practices',
+        title: 'CSS Fundamentals',
+        content: 'Style your web pages with CSS.',
+        videoUrl: 'https://example.com/videos/css-basics',
+        order: 2,
+        courseId: webDevCourse.id,
+      },
+    }),
+    prisma.lesson.create({
+      data: {
+        title: 'JavaScript Basics',
+        content: 'Introduction to JavaScript programming.',
+        videoUrl: 'https://example.com/videos/js-basics',
+        order: 3,
+        courseId: webDevCourse.id,
+      },
+    }),
+  ]);
+
+  // Create lessons for React course
+  const reactLessons = await Promise.all([
+    prisma.lesson.create({
+      data: {
+        title: 'React Components',
+        content: 'Learn about React components and props.',
+        videoUrl: 'https://example.com/videos/react-components',
+        order: 1,
         courseId: reactCourse.id,
       },
-    });
-
-    // Create group members
-    await Promise.all([
-      prisma.groupMember.create({
-        data: {
-          userId: instructor.id,
-          groupId: webDevGroup.id,
-          role: 'OWNER',
-        },
-      }),
-      prisma.groupMember.create({
-        data: {
-          userId: student.id,
-          groupId: webDevGroup.id,
-          role: 'MEMBER',
-        },
-      }),
-      prisma.groupMember.create({
-        data: {
-          userId: instructor.id,
-          groupId: reactGroup.id,
-          role: 'OWNER',
-        },
-      }),
-      prisma.groupMember.create({
-        data: {
-          userId: student.id,
-          groupId: reactGroup.id,
-          role: 'MEMBER',
-        },
-      }),
-    ]);
-
-    // Create messages
-    await Promise.all([
-      prisma.message.create({
-        data: {
-          content: 'Welcome to the Web Development course!',
-          userId: instructor.id,
-          groupId: webDevGroup.id,
-        },
-      }),
-      prisma.message.create({
-        data: {
-          content: 'Thanks! Excited to learn!',
-          userId: student.id,
-          groupId: webDevGroup.id,
-        },
-      }),
-      prisma.message.create({
-        data: {
-          content: 'Welcome to the React course!',
-          userId: instructor.id,
-          groupId: reactGroup.id,
-        },
-      }),
-      prisma.message.create({
-        data: {
-          content: 'Looking forward to learning React!',
-          userId: student.id,
-          groupId: reactGroup.id,
-        },
-      }),
-    ]);
-
-    // Create submissions
-    await prisma.submission.create({
+    }),
+    prisma.lesson.create({
       data: {
-        content: 'My first HTML assignment',
-        userId: student.id,
-        courseId: webDevCourse.id,
-        lessonId: webDevLessons[0].id,
-        status: 'GRADED',
-        score: 85,
-        feedback: 'Good work! Keep practicing.',
-        gradedAt: new Date(),
+        title: 'State Management',
+        content: 'Managing state in React applications.',
+        videoUrl: 'https://example.com/videos/react-state',
+        order: 2,
+        courseId: reactCourse.id,
       },
-    });
+    }),
+  ]);
 
-    console.log('Database seeded successfully');
-    console.log('Admin credentials:', { email: 'admin@codespring.com', password: 'admin123' });
-    console.log('Instructor credentials:', { email: 'instructor@codespring.com', password: 'instructor123' });
-    console.log('Student credentials:', { email: 'student@codespring.com', password: 'student123' });
+  // Create enrollments
+  await prisma.enrollment.create({
+    data: {
+      userId: student.id,
+      courseId: webDevCourse.id,
+      progress: 33.33, // Completed 1/3 lessons
+    },
+  });
 
-  } catch (error) {
-    console.error('Error seeding database:', error);
-    process.exit(1);
-  } finally {
-    await prisma.$disconnect();
-  }
+  await prisma.enrollment.create({
+    data: {
+      userId: student.id,
+      courseId: reactCourse.id,
+      progress: 50, // Completed 1/2 lessons
+    },
+  });
+
+  // Create submissions
+  await prisma.submission.create({
+    data: {
+      content: 'My first HTML webpage submission',
+      userId: student.id,
+      lessonId: webDevLessons[0].id,
+      grade: 95,
+      feedback: 'Excellent work! Great understanding of HTML basics.',
+    },
+  });
+
+  // Create study groups
+  const webDevGroup = await prisma.group.create({
+    data: {
+      name: 'Web Dev Study Group',
+      description: 'A group for discussing web development topics',
+      courseId: webDevCourse.id,
+    },
+  });
+
+  const reactGroup = await prisma.group.create({
+    data: {
+      name: 'React Learners',
+      description: 'Discussion group for React.js students',
+      courseId: reactCourse.id,
+    },
+  });
+
+  // Add members to groups
+  await prisma.groupMember.create({
+    data: {
+      userId: instructor.id,
+      groupId: webDevGroup.id,
+      role: 'admin',
+    },
+  });
+
+  await prisma.groupMember.create({
+    data: {
+      userId: student.id,
+      groupId: webDevGroup.id,
+      role: 'member',
+    },
+  });
+
+  // Create some messages
+  await prisma.message.create({
+    data: {
+      content: 'Welcome to the Web Development study group!',
+      userId: instructor.id,
+      groupId: webDevGroup.id,
+    },
+  });
+
+  await prisma.message.create({
+    data: {
+      content: 'Thanks! Excited to learn web development!',
+      userId: student.id,
+      groupId: webDevGroup.id,
+    },
+  });
+
+  console.log('Database has been seeded! 🌱');
 }
 
-main(); 
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  }); 

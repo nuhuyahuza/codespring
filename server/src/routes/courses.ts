@@ -5,26 +5,23 @@ import { authenticateUser } from '../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get all courses
-router.get('/api/courses', async (req, res) => {
+// Get all courses with optional featured filter
+router.get('/', async (req, res) => {
   try {
     const { featured } = req.query;
     
     const courses = await prisma.course.findMany({
-      where: featured === 'true' ? {
-        // Add conditions for featured courses (e.g., high enrollment, rating)
-        published: true,
-      } : {
-        published: true,
-      },
-      take: featured === 'true' ? 3 : undefined, // Limit to 3 courses if featured
-      orderBy: featured === 'true' ? {
-        enrollments: {
-          _count: 'desc'
+      take: featured === 'true' ? 3 : undefined,
+      orderBy: [
+        {
+          enrollments: {
+            _count: 'desc'
+          }
+        },
+        {
+          createdAt: 'desc'
         }
-      } : {
-        createdAt: 'desc'
-      },
+      ],
       include: {
         instructor: {
           select: {
@@ -152,6 +149,132 @@ router.delete('/:id', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error deleting course:', error);
     res.status(500).json({ error: 'Failed to delete course' });
+  }
+});
+
+// Get course content
+router.get('/:id/content', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verify enrollment or instructor status
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: {
+        instructor: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        lessons: {
+          orderBy: {
+            order: 'asc',
+          },
+          include: {
+            progress: {
+              where: {
+                userId: req.user!.id,
+              },
+            },
+          },
+        },
+        enrollments: {
+          where: {
+            userId: req.user!.id,
+            paymentStatus: 'completed',
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Check if user is enrolled or is the instructor
+    const isEnrolled = course.enrollments.length > 0;
+    const isInstructor = course.instructor.id === req.user!.id;
+
+    if (!isEnrolled && !isInstructor) {
+      return res.status(403).json({ error: 'Not enrolled in this course' });
+    }
+
+    // Format response
+    const formattedLessons = course.lessons.map(lesson => ({
+      id: lesson.id,
+      title: lesson.title,
+      order: lesson.order,
+      content: lesson.content,
+      videoUrl: lesson.videoUrl,
+      completed: lesson.progress[0]?.completed || false,
+    }));
+
+    res.json({
+      id: course.id,
+      title: course.title,
+      instructor: course.instructor,
+      lessons: formattedLessons,
+    });
+  } catch (error) {
+    console.error('Error fetching course content:', error);
+    res.status(500).json({ error: 'Failed to fetch course content' });
+  }
+});
+
+// Get course progress
+router.get('/:id/progress', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get all lessons for the course
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: {
+        lessons: {
+          include: {
+            progress: {
+              where: {
+                userId: req.user!.id,
+              },
+            },
+          },
+        },
+        enrollments: {
+          where: {
+            userId: req.user!.id,
+            paymentStatus: 'completed',
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Check enrollment
+    if (course.enrollments.length === 0) {
+      return res.status(403).json({ error: 'Not enrolled in this course' });
+    }
+
+    // Calculate progress
+    const completedLessons = course.lessons
+      .filter(lesson => lesson.progress[0]?.completed)
+      .map(lesson => lesson.id);
+
+    const totalProgress = course.lessons.length > 0
+      ? completedLessons.length / course.lessons.length
+      : 0;
+
+    res.json({
+      completedLessons,
+      totalProgress,
+      currentLesson: course.lessons.find(lesson => !lesson.progress[0]?.completed)?.id || null,
+    });
+  } catch (error) {
+    console.error('Error fetching course progress:', error);
+    res.status(500).json({ error: 'Failed to fetch course progress' });
   }
 });
 

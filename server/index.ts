@@ -12,6 +12,7 @@ import authRoutes from './routes/auth';
 import courseRoutes from './routes/courses';
 import submissionRoutes from './routes/submissions';
 import groupRoutes from './routes/groups';
+import studentRoutes from './routes/student';
 
 // WebSocket
 import { setupChatServer } from './websocket/chat';
@@ -46,6 +47,7 @@ app.use('/api', authRoutes);
 app.use('/api', courseRoutes);
 app.use('/api', submissionRoutes);
 app.use('/api', groupRoutes);
+app.use('/api', studentRoutes);
 
 // Setup WebSocket
 setupChatServer(io);

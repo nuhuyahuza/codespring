@@ -1,6 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { api } from '@/lib/api';
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+interface Course {
+  id: string;
+  title: string;
+  instructor: string;
+  thumbnail: string | null;
+  progress: number;
+  lastAccessedAt: string;
+}
+
+interface Certificate {
+  id: string;
+  courseTitle: string;
+  issueDate: string;
+  credential: string;
+}
+
+interface Session {
+  id: string;
+  courseTitle: string;
+  startTime: string;
+  duration: number;
+  instructor: string;
+}
+
+interface ProgressData {
+  date: string;
+  hoursSpent: number;
+  lessonsCompleted: number;
+}
 
 interface DashboardData {
   enrolledCourses: number;
@@ -8,73 +37,22 @@ interface DashboardData {
   hoursLearned: number;
   certificateCount: number;
   averageProgress: number;
-  recentCourses: Array<{
-    id: string;
-    title: string;
-    thumbnail: string;
-    progress: number;
-    lastAccessedAt: string;
-  }>;
-  allCourses: Array<{
-    id: string;
-    title: string;
-    thumbnail: string;
-    progress: number;
-    instructor: string;
-    category: string;
-  }>;
-  progress: Array<{
-    date: string;
-    hoursSpent: number;
-    lessonsCompleted: number;
-  }>;
-  upcomingSessions: Array<{
-    id: string;
-    courseTitle: string;
-    startTime: string;
-    duration: number;
-    instructor: string;
-  }>;
-  certificates: Array<{
-    id: string;
-    courseTitle: string;
-    issueDate: string;
-    credential: string;
-  }>;
+  recentCourses: Course[];
+  allCourses: Course[];
+  progress: ProgressData[];
+  upcomingSessions: Session[];
+  certificates: Certificate[];
+}
+
+async function fetchDashboard(): Promise<DashboardData> {
+  return api.get("/api/dashboard/student");
 }
 
 export function useStudentDashboard() {
-  const { user } = useAuth();
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchDashboard() {
-      if (!user) {
-        setError('User not authenticated');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await api.get<DashboardData>('/api/student/dashboard');
-        setDashboard(response.data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load dashboard data');
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchDashboard();
-  }, [user]);
-
-  return {
-    dashboard,
-    isLoading,
-    error,
-  };
+  return useQuery({
+    queryKey: ["studentDashboard"],
+    queryFn: fetchDashboard,
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    staleTime: 60 * 1000, // Consider data stale after 1 minute
+  });
 } 

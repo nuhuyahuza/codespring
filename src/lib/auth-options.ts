@@ -1,37 +1,72 @@
-import { prisma } from './prisma';
-import bcrypt from 'bcryptjs';
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "./prisma";
+import { compare } from "bcryptjs";
 
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-  name?: string;
-  image?: string;
-}
+export const authOptions: NextAuthOptions = {
+  pages: {
+    signIn: "/login",
+  },
+  session: {
+    strategy: "jwt",
+  },
+  providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Invalid credentials");
+        }
 
-export async function verifyCredentials(email: string, password: string): Promise<User | null> {
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
+        const user = await prisma.user.findUnique({
+          where: {
+            email: credentials.email,
+          },
+        });
 
-  if (!user || !user.password) {
-    return null;
-  }
+        if (!user) {
+          throw new Error("Invalid credentials");
+        }
 
-  const isValid = await bcrypt.compare(password, user.password);
-  return isValid ? user : null;
-}
+        const isPasswordValid = await compare(credentials.password, user.password);
 
-export async function verifySession(token: string): Promise<User | null> {
-  try {
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: { user: true }
-    });
+        if (!isPasswordValid) {
+          throw new Error("Invalid credentials");
+        }
 
-    return session?.user || null;
-  } catch (error) {
-    console.error('Session verification failed:', error);
-    return null;
-  }
-} 
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        return {
+          ...token,
+          id: user.id,
+          role: user.role,
+        };
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id,
+          role: token.role,
+        },
+      };
+    },
+  },
+}; 

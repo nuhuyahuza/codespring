@@ -8,10 +8,11 @@ import { LearningProgress } from '@/features/student/components/LearningProgress
 import { UpcomingSessions } from '@/features/student/components/UpcomingSessions';
 import { Certificates } from '@/features/student/components/Certificates';
 import { BookOpen, Clock, Award, BarChart } from 'lucide-react';
+import { getErrorMessage } from '@/lib/utils';
 
 export function StudentDashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
-  const { dashboard, isLoading, error } = useStudentDashboard();
+  const { data: dashboard, isLoading, error } = useStudentDashboard();
 
   if (isLoading) {
     return (
@@ -25,7 +26,15 @@ export function StudentDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-semibold text-destructive">Error loading dashboard</h2>
-        <p className="text-muted-foreground">{error}</p>
+        <p className="text-muted-foreground">{getErrorMessage(error)}</p>
+      </div>
+    );
+  }
+
+  if (!dashboard) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h2 className="text-xl font-semibold text-destructive">No dashboard data available</h2>
       </div>
     );
   }

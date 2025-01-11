@@ -14,72 +14,63 @@ interface CertificatesProps {
 }
 
 export function Certificates({ certificates }: CertificatesProps) {
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  if (certificates.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Award className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground text-center">
-            Complete courses to earn certificates
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      {certificates.map((certificate) => (
-        <Card key={certificate.id}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              {certificate.courseTitle}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1">
-                <p className="text-sm text-muted-foreground">
-                  Issued on {formatDate(certificate.issueDate)}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Credential ID: {certificate.credential}
-                </p>
-              </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">My Certificates</h2>
+          <p className="text-muted-foreground">
+            View and download your earned certificates
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Award className="h-5 w-5 text-muted-foreground" />
+          <span className="text-lg font-semibold">{certificates.length}</span>
+        </div>
+      </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => window.open(`/certificates/${certificate.id}/download`, '_blank')}
-                >
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => window.open(`/certificates/${certificate.id}/verify`, '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Verify
-                </Button>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {certificates.map((certificate) => (
+          <Card key={certificate.id}>
+            <CardHeader>
+              <CardTitle className="line-clamp-2">{certificate.courseTitle}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Issued on {new Date(certificate.issueDate).toLocaleDateString()}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm">
+                  <span className="font-medium">Credential ID:</span>{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    {certificate.credential}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button className="flex-1">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button variant="outline" className="flex-1">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Verify
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        ))}
+
+        {certificates.length === 0 && (
+          <div className="col-span-full text-center py-12">
+            <Award className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No Certificates Yet</h3>
+            <p className="text-muted-foreground">
+              Complete courses to earn certificates
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

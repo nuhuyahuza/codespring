@@ -1,4 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   LineChart,
   Line,
@@ -7,7 +13,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
+import { formatDuration } from "@/lib/utils";
+import { Clock, GraduationCap } from "lucide-react";
 
 interface ProgressData {
   date: string;
@@ -20,100 +28,104 @@ interface LearningProgressProps {
 }
 
 export function LearningProgress({ progress }: LearningProgressProps) {
-  const totalHours = progress.reduce((sum, day) => sum + day.hoursSpent, 0);
+  // Calculate totals
+  const totalHours = progress.reduce((acc, day) => acc + day.hoursSpent, 0);
   const totalLessons = progress.reduce(
-    (sum, day) => sum + day.lessonsCompleted,
+    (acc, day) => acc + day.lessonsCompleted,
     0
   );
-  const averageHoursPerDay =
-    progress.length > 0 ? (totalHours / progress.length).toFixed(1) : '0';
 
-  const formattedData = progress.map((day) => ({
-    ...day,
-    date: new Date(day.date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+  // Format data for chart
+  const chartData = progress.map((day) => ({
+    date: new Date(day.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
     }),
+    "Hours Spent": Number(day.hoursSpent.toFixed(1)),
+    "Lessons Completed": day.lessonsCompleted,
   }));
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Time Spent</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalHours}h</div>
+            <div className="text-2xl font-bold">
+              {formatDuration(totalHours * 60)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Time spent learning
+              In the last 30 days
             </p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Lessons Completed
             </CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalLessons}</div>
             <p className="text-xs text-muted-foreground">
-              Total lessons finished
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Average Daily Hours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageHoursPerDay}h</div>
-            <p className="text-xs text-muted-foreground">
-              Hours per day
+              In the last 30 days
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress Charts */}
       <Card>
         <CardHeader>
           <CardTitle>Learning Activity</CardTitle>
+          <CardDescription>
+            Your learning progress over the last 30 days
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={formattedData}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 12 }}
-                  tickMargin={10}
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
                 />
-                <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                <YAxis
+                  yAxisId="left"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}h`}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <Tooltip />
                 <Line
                   yAxisId="left"
                   type="monotone"
-                  dataKey="hoursSpent"
-                  name="Hours Spent"
+                  dataKey="Hours Spent"
                   stroke="#2563eb"
                   strokeWidth={2}
+                  dot={false}
                 />
                 <Line
                   yAxisId="right"
                   type="monotone"
-                  dataKey="lessonsCompleted"
-                  name="Lessons Completed"
+                  dataKey="Lessons Completed"
                   stroke="#16a34a"
                   strokeWidth={2}
+                  dot={false}
                 />
               </LineChart>
             </ResponsiveContainer>
