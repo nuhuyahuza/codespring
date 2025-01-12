@@ -9,20 +9,11 @@ import {
 } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
 import { PaymentModal } from '@/components/payment/PaymentModal';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function ShoppingCart() {
-  const { cartItems, cartCount, removeFromCart } = useCart();
+  const { cartItems, cartCount, removeFromCart, total } = useCart();
   const [selectedItem, setSelectedItem] = useState<{id: string; title: string; price: number} | null>(null);
-  const [total, setTotal] = useState(0);
-  
-  // Update total whenever cartItems changes
-  useEffect(() => {
-	  const newTotal = cartItems.reduce((sum, item) => sum + item.price, 0);
-	  console.log("Hi",cartItems);
-    setTotal(newTotal);
-    console.log('Cart updated:', { items: cartItems, count: cartCount, total: newTotal });
-  }, [cartItems, cartCount]);
 
   const handlePurchase = (item: {id: string; title: string; price: number}) => {
     console.log('Purchasing item:', item);

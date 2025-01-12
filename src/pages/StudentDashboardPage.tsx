@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useStudentDashboard } from '@/features/student/hooks/useStudentDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,21 @@ import { UpcomingSessions } from '@/features/student/components/UpcomingSessions
 import { Certificates } from '@/features/student/components/Certificates';
 import { BookOpen, Clock, Award, BarChart, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/utils';
+import { useAuth } from '@/features/auth/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export function StudentDashboardPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const { data: dashboard, isLoading, error } = useStudentDashboard();
+
+  useEffect(() => {
+    // If user has no enrolled courses, redirect to courses page
+    if (user?.role === 'STUDENT' && (!user.enrolledCourses || user.enrolledCourses.length === 0)) {
+      navigate('/courses');
+    }
+  }, [user, navigate]);
 
   if (isLoading) {
     return (

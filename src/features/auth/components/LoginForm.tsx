@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,14 +22,21 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, user, isAuthenticated } = useAuth();
 
   // Handle initial auth state
   useEffect(() => {
-    if (isAuthenticated && user && !isLoading && !isSubmitting) {
-      navigate('/dashboard', { replace: true });
+    if (isAuthenticated && user && !isLoading) {
+      // Check if user needs onboarding
+      if (user.role === 'STUDENT' && !user.onboardingCompleted) {
+        navigate('/onboarding', { replace: true });
+      } else {
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+      }
     }
-  }, [isAuthenticated, user, isLoading, navigate, isSubmitting]);
+  }, [isAuthenticated, user, isLoading, navigate, location]);
 
   const {
     register,
@@ -45,13 +52,15 @@ export function LoginForm() {
     try {
       setError(null);
       setIsSubmitting(true);
-      await login(data.email, data.password);
+      const userData = await login(data.email, data.password);
       
-      // Show success message and navigate
+      // Show success message
       toast({
         title: "Login Successful",
-        description: "Welcome back! Redirecting to dashboard...",
+        description: "Welcome back! Redirecting...",
       });
+
+      // Navigation is handled by useEffect
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -66,10 +75,10 @@ export function LoginForm() {
   };
 
   // Show loading state
-  if (isLoading || (isSubmitting && !error)) {
+  if (isLoading || isSubmitting) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         <p className="text-muted-foreground">
           {isSubmitting ? "Signing in..." : "Loading..."}
         </p>

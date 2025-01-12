@@ -34,16 +34,20 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authAttempted, setAuthAttempted] = useState(false);
 
   // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
+      if (authAttempted) return;
+      
       try {
         const token = localStorage.getItem('token');
         if (!token) {
           setUser(null);
           setIsLoading(false);
           setIsInitialized(true);
+          setAuthAttempted(true);
           return;
         }
 
@@ -67,11 +71,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setIsLoading(false);
         setIsInitialized(true);
+        setAuthAttempted(true);
       }
     };
 
     initAuth();
-  }, []);
+  }, [authAttempted]);
 
   const login = async (email: string, password: string): Promise<User> => {
     setIsLoading(true);
@@ -123,9 +128,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     setCart([]);
   };
 
-  // Don't render anything until auth is initialized
+  // Show loading spinner while initializing
   if (!isInitialized) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

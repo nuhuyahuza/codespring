@@ -9,6 +9,7 @@ interface CartItem {
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
+  total: number;
   addToCart: (item: CartItem) => void;
   removeFromCart: (courseId: string) => void;
   clearCart: () => void;
@@ -17,76 +18,62 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const CART_STORAGE_KEY = 'cart'; // Add constant for consistency
+
 // Helper function to get cart from localStorage
 const getStoredCart = (): CartItem[] => {
   try {
-    const savedCart = localStorage.getItem('cart');
-    console.log('Raw cart from localStorage:', savedCart);
-    if (savedCart) {
-      const parsedCart = JSON.parse(savedCart);
-      console.log('Parsed cart:', parsedCart);
-      return parsedCart;
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    console.log('Reading from localStorage:', savedCart); // Debug log
+    
+    if (!savedCart) {
+      return [];
     }
+
+    const parsedCart = JSON.parse(savedCart);
+    if (!Array.isArray(parsedCart)) {
+      console.warn('Stored cart is not an array, resetting');
+      return [];
+    }
+
+    return parsedCart;
   } catch (error) {
     console.error('Error reading cart from localStorage:', error);
+    return [];
   }
-  return [];
 };
 
 function CartProviderComponent({ children }: { children: ReactNode }) {
-  // Initialize state with localStorage data
-  const [cartItems, setCartItems] = useState<CartItem[]>(getStoredCart());
-  const [cartCount, setCartCount] = useState<number>(getStoredCart().length);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const stored = getStoredCart();
+    console.log('Initial cart state:', stored); // Debug log
+    return stored;
+  });
 
-  // Update cart count whenever cartItems changes
-  useEffect(() => {
-    setCartCount(cartItems.length);
-  }, [cartItems]);
+  // Calculate total
+  const total = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const cartCount = cartItems.length;
 
   // Sync with localStorage when cartItems changes
   useEffect(() => {
-    console.log('Cart items changed:', cartItems);
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    console.log('Saving to localStorage:', cartItems); // Debug log
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Listen for storage events from other tabs
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'cart') {
-        const newCart = e.newValue ? JSON.parse(e.newValue) : [];
-        setCartItems(newCart);
-        setCartCount(newCart.length);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
   const addToCart = (item: CartItem) => {
-    console.log('Adding item to cart:', item);
     setCartItems(prevItems => {
       if (prevItems.some(cartItem => cartItem.id === item.id)) {
-        console.log('Item already in cart');
         return prevItems;
       }
-      const newCart = [...prevItems, item];
-      console.log('New cart state:', newCart);
-      return newCart;
+      return [...prevItems, item];
     });
   };
 
   const removeFromCart = (courseId: string) => {
-    console.log('Removing item from cart:', courseId);
-    setCartItems(prevItems => {
-      const newCart = prevItems.filter(item => item.id !== courseId);
-      console.log('New cart state after removal:', newCart);
-      return newCart;
-    });
+    setCartItems(prevItems => prevItems.filter(item => item.id !== courseId));
   };
 
   const clearCart = () => {
-    console.log('Clearing cart');
     localStorage.removeItem('cart');
     setCartItems([]);
   };
@@ -96,7 +83,17 @@ function CartProviderComponent({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={{ cartItems, cartCount, addToCart, removeFromCart, clearCart, isInCart }}>
+    <CartContext.Provider 
+      value={{ 
+        cartItems, 
+        cartCount, 
+        total,
+        addToCart, 
+        removeFromCart, 
+        clearCart, 
+        isInCart 
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
@@ -111,4 +108,4 @@ const useCart = () => {
 }
 
 export const CartProvider = CartProviderComponent;
-export  {useCart}; 
+export { useCart }; 

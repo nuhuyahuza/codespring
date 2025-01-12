@@ -1,13 +1,17 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/features/auth';
 import { ShoppingCart } from '@/components/cart/ShoppingCart';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { MainFooter } from './MainFooter';
+import { useTheme } from '@/hooks/useTheme';
 
 export function RootLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,10 +22,26 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
   // Don't show header on auth pages
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+  const isLandingPage = location.pathname === '/';
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const firstSectionHeight = window.innerHeight;
+      setShowNav(scrollPosition > firstSectionHeight - 100);
+    };
+
+    if (isLandingPage) {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    } else {
+      setShowNav(true);
+    }
+  }, [isLandingPage]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {!isAuthPage && (
+    <div className="min-h-screen flex flex-col bg-background">
+      {!isAuthPage && (showNav || !isLandingPage) && (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-14 items-center justify-between">
             <Link to="/" className="flex items-center space-x-2">
@@ -40,6 +60,17 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                 About
               </Link>
               
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="w-9"
+              >
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Toggle theme</span>
+              </Button>
+
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   {user?.role === 'STUDENT' && <ShoppingCart />}
@@ -79,6 +110,17 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           {isMenuOpen && (
             <div className="md:hidden p-4 border-t">
               <nav className="flex flex-col space-y-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="w-9"
+                >
+                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+
                 <Link to="/courses" className="text-muted-foreground hover:text-foreground">
                   Courses
                 </Link>
@@ -115,7 +157,9 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
         </header>
       )}
 
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
+
+      {!isAuthPage && <MainFooter />}
     </div>
   );
 } 

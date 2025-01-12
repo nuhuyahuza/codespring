@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '@/features/auth';
+import { api } from '@/lib/api';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const isDev = import.meta.env.DEV;
+  const { token, updateUser } = useAuth();
 
   const handlePayment = async () => {
     try {
@@ -70,6 +73,26 @@ export function PaymentModal({
     } finally {
       setIsProcessing(false);
       onClose();
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      // Call your API to enroll in the course
+      await api.post(
+        `/courses/${courseId}/enroll`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update the user's enrolled courses in auth context
+      await updateUser();
+      
+      // Call the onPaymentComplete callback
+      onPaymentComplete();
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      toast.error('Failed to enroll in course. Please try again.');
     }
   };
 

@@ -1,2 +1,3 @@
-export { AuthProvider, useAuth } from './context/AuthContext.tsx';
-export type { AuthContextType } from './context/AuthContext.tsx';
+export { useAuth } from './hooks/useAuth';
+export { AuthProvider } from './context/AuthProvider';
+export type { User } from './types';
