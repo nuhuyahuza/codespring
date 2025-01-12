@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth";
 
 interface Course {
   id: string;
@@ -11,51 +11,46 @@ interface Course {
   lastAccessedAt: string;
 }
 
-interface Certificate {
-  id: string;
-  courseTitle: string;
-  issueDate: string;
-  credential: string;
-}
-
-interface Session {
-  id: string;
-  courseTitle: string;
-  startTime: string;
-  duration: number;
-  instructor: string;
-}
-
-interface ProgressData {
-  date: string;
-  hoursSpent: number;
-  lessonsCompleted: number;
-}
-
 interface DashboardData {
   enrolledCourses: number;
   activeCourses: number;
   hoursLearned: number;
-  certificateCount: number;
   averageProgress: number;
   recentCourses: Course[];
   allCourses: Course[];
-  progress: ProgressData[];
-  upcomingSessions: Session[];
-  certificates: Certificate[];
 }
 
-async function fetchDashboard(token: string): Promise<DashboardData> {
-  const response = await api.get("/student/dashboard", token);
-  return response;
-}
+const MOCK_DASHBOARD_DATA: DashboardData = {
+  enrolledCourses: 3,
+  activeCourses: 2,
+  hoursLearned: 25,
+  averageProgress: 75,
+  recentCourses: [
+    {
+      id: '1',
+      title: 'Advanced JavaScript Development',
+      instructor: 'John Doe',
+      thumbnail: '/placeholder-course.jpg',
+      progress: 75,
+      lastAccessedAt: new Date().toISOString(),
+    },
+    // Add more mock courses as needed
+  ],
+  allCourses: [
+    // Same as recentCourses for now
+  ]
+};
 
 export function useStudentDashboard() {
   const { token } = useAuth();
-  
+
   return useQuery({
     queryKey: ['studentDashboard'],
     queryFn: async () => {
+      if (import.meta.env.DEV) {
+        // Return mock data in development
+        return MOCK_DASHBOARD_DATA;
+      }
       const response = await api.get('/student/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });

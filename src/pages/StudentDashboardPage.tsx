@@ -1,31 +1,18 @@
 import { useState, useEffect } from 'react';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/features/auth';
 import { useStudentDashboard } from '@/features/student/hooks/useStudentDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EnrolledCourses } from '@/features/student/components/EnrolledCourses';
-import { LearningProgress } from '@/features/student/components/LearningProgress';
-import { UpcomingSessions } from '@/features/student/components/UpcomingSessions';
-import { Certificates } from '@/features/student/components/Certificates';
-import { BookOpen, Clock, Award, BarChart, Loader2 } from 'lucide-react';
-import { getErrorMessage } from '@/lib/utils';
-import { useAuth } from '@/features/auth';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Loader2, Search } from 'lucide-react';
 
 export function StudentDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
-  const { data: dashboard, isLoading, error, refetch } = useStudentDashboard();
-
-  useEffect(() => {
-    // Refetch dashboard data when user changes
-    if (user) {
-      refetch();
-    }
-  }, [user, refetch]);
+  const { data: dashboard, isLoading } = useStudentDashboard();
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (isLoading) {
     return (
@@ -35,150 +22,91 @@ export function StudentDashboardPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h2 className="text-xl font-semibold text-destructive">Error loading dashboard</h2>
-        <p className="text-muted-foreground">{getErrorMessage(error)}</p>
-      </div>
-    );
-  }
-
-  // Show empty state if no courses are enrolled
-  if (!dashboard || dashboard.allCourses.length === 0) {
-    return (
-      <div className="container py-8">
-        <div className="flex flex-col items-center justify-center space-y-4 min-h-[60vh]">
-          <BookOpen className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-2xl font-semibold text-center">No Enrolled Courses</h2>
-          <p className="text-muted-foreground text-center max-w-md">
-            You haven't enrolled in any courses yet. Start your learning journey today!
-          </p>
-          <Button 
-            onClick={() => navigate('/courses')}
-            className="mt-4"
-          >
-            Browse Courses
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <ProtectedRoute requiredRole="STUDENT">
-      <div className="container py-8">
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">My Learning Dashboard</h1>
-            <p className="text-muted-foreground">
-              Track your progress and continue learning
-            </p>
+    <div className="container py-6 space-y-6">
+      {/* Welcome Section */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">Welcome back, {user?.name || 'Student'}! 👋</h1>
+        <p className="text-muted-foreground">
+          Keep up the great work! You're making excellent progress.
+        </p>
+      </div>
+
+      {/* Progress Overview */}
+      <div className="flex justify-end">
+        <div className="w-32 h-32 relative">
+          <svg className="w-full h-full" viewBox="0 0 100 100">
+            <circle
+              className="text-muted stroke-current"
+              strokeWidth="10"
+              fill="transparent"
+              r="40"
+              cx="50"
+              cy="50"
+            />
+            <circle
+              className="text-primary stroke-current"
+              strokeWidth="10"
+              strokeLinecap="round"
+              fill="transparent"
+              r="40"
+              cx="50"
+              cy="50"
+              strokeDasharray={`${75 * 2.51327} 251.327`}
+              transform="rotate(-90 50 50)"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-2xl font-bold">75%</span>
           </div>
-
-          {/* Overview Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Enrolled Courses</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dashboard.enrolledCourses}</div>
-                <p className="text-xs text-muted-foreground">
-                  {dashboard.activeCourses} active courses
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Hours Learned</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dashboard.hoursLearned}h</div>
-                <p className="text-xs text-muted-foreground">
-                  Last 30 days
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Certificates</CardTitle>
-                <Award className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dashboard.certificateCount}</div>
-                <p className="text-xs text-muted-foreground">
-                  Earned certificates
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Progress</CardTitle>
-                <BarChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dashboard.averageProgress}%</div>
-                <p className="text-xs text-muted-foreground">
-                  Across all courses
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Content Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="courses">My Courses</TabsTrigger>
-              <TabsTrigger value="progress">Progress</TabsTrigger>
-              <TabsTrigger value="sessions">Sessions</TabsTrigger>
-              <TabsTrigger value="certificates">Certificates</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card className="col-span-2">
-                  <CardHeader>
-                    <CardTitle>Continue Learning</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <EnrolledCourses
-                      courses={dashboard.recentCourses}
-                      showProgress
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="courses">
-              <EnrolledCourses
-                courses={dashboard.allCourses}
-                showProgress
-                showFilters
-              />
-            </TabsContent>
-
-            <TabsContent value="progress">
-              <LearningProgress progress={dashboard.progress} />
-            </TabsContent>
-
-            <TabsContent value="sessions">
-              <UpcomingSessions sessions={dashboard.upcomingSessions} />
-            </TabsContent>
-
-            <TabsContent value="certificates">
-              <Certificates certificates={dashboard.certificates} />
-            </TabsContent>
-          </Tabs>
         </div>
       </div>
-    </ProtectedRoute>
+
+      {/* Course Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search courses..."
+          className="pl-10"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* My Courses */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">My Courses</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {dashboard?.recentCourses.map((course) => (
+            <Card key={course.id} className="overflow-hidden">
+              {course.thumbnail && (
+                <img
+                  src={course.thumbnail}
+                  alt={course.title}
+                  className="w-full h-48 object-cover"
+                />
+              )}
+              <CardHeader>
+                <CardTitle className="line-clamp-2">{course.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Progress value={course.progress} />
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{course.progress}% complete</span>
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => navigate(`/courses/${course.id}/learn`)}
+                  >
+                    Resume Course
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 } 
