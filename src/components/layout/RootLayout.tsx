@@ -1,21 +1,52 @@
-import { useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { MainFooter } from './MainFooter';
+import { useTheme } from '@/hooks/useTheme';
 
 export function RootLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
+  const isDashboardRoute = location.pathname.includes('/dashboard') || 
+    location.pathname.includes('/admin');
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const { isDark, toggleTheme } = useTheme();
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isLandingPage) {
+        const scrollPosition = window.scrollY;
+        setShowNav(scrollPosition > window.innerHeight * 0.8);
+      }
+    };
+
+    if (isLandingPage) {
+      window.addEventListener('scroll', handleScroll);
+      handleScroll(); // Initial check
+    } else if (!isAuthPage) {
+      setShowNav(true);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isLandingPage, isAuthPage]);
+
+  if (isAuthPage) {
+    return <Outlet />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
+          showNav ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
@@ -34,8 +65,17 @@ export function RootLayout() {
               <Link to="/about" className="text-muted-foreground hover:text-foreground">
                 About
               </Link>
-              <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleTheme}
+                className="hover:bg-transparent"
+              >
+                {isDark ? (
+                  <Sun className="h-5 w-5 hover:text-yellow-500 transition-colors" />
+                ) : (
+                  <Moon className="h-5 w-5 hover:text-blue-500 transition-colors" />
+                )}
               </Button>
               <Link to="/login">
                 <Button variant="ghost">Sign in</Button>
@@ -46,134 +86,76 @@ export function RootLayout() {
             </div>
 
             {/* Mobile menu button */}
-            <div className="flex md:hidden">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} className="mr-2">
-                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <div className="flex items-center gap-2 md:hidden">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleTheme}
+                className="hover:bg-transparent"
+              >
+                {isDark ? (
+                  <Sun className="h-5 w-5 hover:text-yellow-500 transition-colors" />
+                ) : (
+                  <Moon className="h-5 w-5 hover:text-blue-500 transition-colors" />
+                )}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                className="md:hidden"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 {isMenuOpen ? (
-                  <X className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 ) : (
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-6 w-6" />
                 )}
-              </Button>
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="border-t md:hidden">
-            <div className="container mx-auto px-4 py-4 space-y-4">
-              <Link
-                to="/courses"
-                className="block text-muted-foreground hover:text-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Courses
-              </Link>
-              <Link
-                to="/instructors"
-                className="block text-muted-foreground hover:text-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Instructors
-              </Link>
-              <Link
-                to="/about"
-                className="block text-muted-foreground hover:text-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <div className="pt-4 space-y-2">
+          {/* Mobile Navigation */}
+          {isMenuOpen && (
+            <div className="md:hidden py-4">
+              <div className="flex flex-col space-y-4">
+                <Link
+                  to="/courses"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Courses
+                </Link>
+                <Link
+                  to="/instructors"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Instructors
+                </Link>
+                <Link
+                  to="/about"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  About
+                </Link>
                 <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-center">
-                    Sign in
-                  </Button>
+                  <Button variant="ghost" className="w-full">Sign in</Button>
                 </Link>
                 <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                  <Button className="w-full justify-center">
-                    Get started
-                  </Button>
+                  <Button className="w-full">Get started</Button>
                 </Link>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </nav>
 
       {/* Main Content */}
-      <main>
+      <main className={showNav ? 'pt-16' : ''}>
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">About</h3>
-              <p className="text-sm text-muted-foreground">
-                CodeSpring is a modern platform for online learning and teaching.
-                Join millions of students and instructors in our global classroom.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Learn</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link to="/courses" className="text-muted-foreground hover:text-foreground">
-                    Browse courses
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/instructors" className="text-muted-foreground hover:text-foreground">
-                    Find instructors
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Teach</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link to="/teach" className="text-muted-foreground hover:text-foreground">
-                    Become an instructor
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/resources" className="text-muted-foreground hover:text-foreground">
-                    Teaching resources
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Connect</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link to="/contact" className="text-muted-foreground hover:text-foreground">
-                    Contact us
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/help" className="text-muted-foreground hover:text-foreground">
-                    Help center
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} CodeSpring. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer - Only show on non-dashboard routes */}
+      {!isDashboardRoute && <MainFooter />}
     </div>
   );
 } 

@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { authenticateUser } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -107,6 +108,55 @@ router.post('/login', async (req, res) => {
     } else {
       res.status(500).json({ error: 'Failed to login' });
     }
+  }
+});
+
+// Add onboarding endpoint
+router.post('/onboarding', authenticateUser, async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { phoneNumber, dateOfBirth, occupation, educationLevel, interests, preferredLanguage } = req.body;
+
+    // Update user with onboarding information
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        phoneNumber: phoneNumber as string,
+        dateOfBirth: new Date(dateOfBirth),
+        occupation: occupation as string,
+        educationLevel: educationLevel as string,
+        preferredLanguage: preferredLanguage as string,
+        interests: JSON.stringify(interests),
+        hasCompletedOnboarding: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        hasCompletedOnboarding: true,
+        phoneNumber: true,
+        dateOfBirth: true,
+        occupation: true,
+        educationLevel: true,
+        preferredLanguage: true,
+        interests: true
+      }
+    });
+
+    res.json({
+      message: 'Onboarding completed successfully',
+      user: {
+        ...updatedUser,
+        interests: updatedUser.interests ? JSON.parse(updatedUser.interests) : []
+      }
+    });
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    res.status(500).json({ message: 'Failed to complete onboarding' });
   }
 });
 

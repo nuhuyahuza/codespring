@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
@@ -8,7 +9,7 @@ interface User {
   role: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -26,7 +27,11 @@ const defaultContext: AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>(defaultContext);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

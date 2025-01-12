@@ -40,6 +40,16 @@ model User {
   role          Role       @default(STUDENT)
   status        String     @default("ACTIVE")
   avatar        String?
+  
+  // Onboarding fields
+  hasCompletedOnboarding Boolean    @default(false)
+  phoneNumber    String?
+  dateOfBirth    DateTime?
+  occupation     String?
+  educationLevel String?
+  preferredLanguage String?
+  interests      String?   @db.Text  // Stored as JSON string
+  
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

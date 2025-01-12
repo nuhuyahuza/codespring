@@ -1,60 +1,52 @@
 import { Router } from 'express';
 import { prisma } from '@/lib/prisma';
-import { authenticateUser } from '@/lib/auth';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { authenticateUser } from '@/server/middleware/auth';
 
 const router = Router();
 
+// Course schema validation
 const createCourseSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
-  thumbnail: z.string().url('Invalid thumbnail URL'),
   price: z.number().min(0, 'Price must be non-negative'),
+  category: z.string().min(1, 'Category is required'),
+  level: z.string().min(1, 'Level is required'),
   duration: z.number().min(0, 'Duration must be non-negative'),
-  level: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
+  imageUrl: z.string().url('Invalid image URL').optional(),
 });
 
-router.post('/api/instructor/courses', authenticateUser, async (req: Request, res: Response) => {
+type CourseCreateData = z.infer<typeof createCourseSchema>;
+
+// Create course
+router.post('/', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
-    const courseData = createCourseSchema.parse(req.body);
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const courseData: CourseCreateData = createCourseSchema.parse(req.body);
 
     const course = await prisma.course.create({
       data: {
         ...courseData,
-        instructorId,
-        status: 'DRAFT',
-        sections: {
-          create: [
-            {
-              title: 'Introduction',
-              order: 1,
-              lessons: {
-                create: [
-                  {
-                    title: 'Welcome to the Course',
-                    order: 1,
-                    type: 'VIDEO',
-                    duration: 0,
-                  },
-                ],
-              },
-            },
-          ],
-        },
+        instructorId: req.user.id,
       },
       include: {
-        sections: {
-          include: {
-            lessons: true,
+        instructor: {
+          select: {
+            name: true,
+            email: true,
           },
         },
+        lessons: true,
+        enrollments: true,
+        reviews: true,
       },
     });
 
-    res.json({ id: course.id });
+    res.json(course);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({
@@ -68,20 +60,25 @@ router.post('/api/instructor/courses', authenticateUser, async (req: Request, re
   }
 });
 
-router.get('/api/instructor/courses', authenticateUser, async (req: Request, res: Response) => {
+// Get all instructor courses
+router.get('/', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const courses = await prisma.course.findMany({
       where: {
-        instructorId,
+        instructorId: req.user.id,
       },
       include: {
-        sections: {
-          include: {
-            lessons: true,
+        instructor: {
+          select: {
+            name: true,
+            email: true,
           },
         },
+        lessons: true,
         enrollments: true,
         reviews: true,
       },
@@ -90,41 +87,65 @@ router.get('/api/instructor/courses', authenticateUser, async (req: Request, res
       },
     });
 
-    res.json(courses);
+    const formattedCourses = courses.map(course => ({
+      ...course,
+      enrollmentCount: course.enrollments.length,
+      averageRating: course.reviews.length 
+        ? course.reviews.reduce((acc, review) => acc + review.rating, 0) / course.reviews.length 
+        : null,
+    }));
+
+    res.json(formattedCourses);
   } catch (error) {
     console.error('Error fetching courses:', error);
     res.status(500).json({ error: 'Failed to fetch courses' });
   }
 });
 
-router.get('/api/instructor/courses/:id', authenticateUser, async (req: Request, res: Response) => {
+// Get single course
+router.get('/:id', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const courseId = req.params.id;
 
     const course = await prisma.course.findFirst({
       where: {
         id: courseId,
-        instructorId,
+        instructorId: req.user.id,
       },
       include: {
-        sections: {
-          include: {
-            lessons: true,
+        instructor: {
+          select: {
+            name: true,
+            email: true,
           },
+        },
+        lessons: {
           orderBy: {
             order: 'asc',
           },
         },
         enrollments: {
           include: {
-            user: true,
-            progress: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
         reviews: {
           include: {
-            user: true,
+            user: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -141,16 +162,20 @@ router.get('/api/instructor/courses/:id', authenticateUser, async (req: Request,
   }
 });
 
-router.put('/api/instructor/courses/:id', authenticateUser, async (req: Request, res: Response) => {
+// Update course
+router.put('/:id', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const courseId = req.params.id;
-    const courseData = createCourseSchema.parse(req.body);
+    const courseData: CourseCreateData = createCourseSchema.parse(req.body);
 
     const course = await prisma.course.findFirst({
       where: {
         id: courseId,
-        instructorId,
+        instructorId: req.user.id,
       },
     });
 
@@ -164,11 +189,15 @@ router.put('/api/instructor/courses/:id', authenticateUser, async (req: Request,
       },
       data: courseData,
       include: {
-        sections: {
-          include: {
-            lessons: true,
+        instructor: {
+          select: {
+            name: true,
+            email: true,
           },
         },
+        lessons: true,
+        enrollments: true,
+        reviews: true,
       },
     });
 
@@ -186,15 +215,19 @@ router.put('/api/instructor/courses/:id', authenticateUser, async (req: Request,
   }
 });
 
-router.delete('/api/instructor/courses/:id', authenticateUser, async (req: Request, res: Response) => {
+// Delete course
+router.delete('/:id', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const courseId = req.params.id;
 
     const course = await prisma.course.findFirst({
       where: {
         id: courseId,
-        instructorId,
+        instructorId: req.user.id,
       },
     });
 

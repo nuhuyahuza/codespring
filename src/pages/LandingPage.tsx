@@ -1,209 +1,352 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { CourseCard } from '@/components/courses/course-card';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, BookOpen, Users, MessageCircle, Star } from 'lucide-react';
+import axios from 'axios';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface Course {
   id: string;
   title: string;
   description: string;
   price: number;
-  imageUrl?: string;
-  instructor: {
-    name: string;
-  };
+  thumbnail: string;
+  instructor: string;
+  enrollments: number;
 }
 
+interface Testimonial {
+  id: string;
+  content: string;
+  studentName: string;
+  studentRole: string;
+  studentAvatar: string;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    id: '1',
+    content: "The course structure and hands-on projects helped me transition from a complete beginner to a confident web developer. The instructors are incredibly supportive and the community is amazing!",
+    studentName: "Sarah Chen",
+    studentRole: "Frontend Developer at TechCorp",
+    studentAvatar: "/testimonials/student1.jpg"
+  },
+  {
+    id: '2',
+    content: "I've taken several online courses before, but CodeSpring's practical approach and real-world projects really set it apart. I landed my dream job within months of completing the Advanced React course.",
+    studentName: "Emily Rodriguez",
+    studentRole: "Full Stack Developer",
+    studentAvatar: "/testimonials/student2.jpg"
+  },
+  {
+    id: '3',
+    content: "The DevOps course was exactly what I needed to level up my career. The instructor's expertise and the comprehensive curriculum exceeded my expectations. Highly recommended!",
+    studentName: "Michael Park",
+    studentRole: "DevOps Engineer",
+    studentAvatar: "/testimonials/student3.jpg"
+  },
+  {
+    id: '4',
+    content: "As a career switcher, I was worried about learning to code. CodeSpring's supportive community and step-by-step approach made the journey much easier than I expected.",
+    studentName: "Jessica Taylor",
+    studentRole: "Software Engineer",
+    studentAvatar: "/testimonials/student4.jpg"
+  }
+];
+
 export function LandingPage() {
-  const { data: courses } = useQuery<Course[]>({
-    queryKey: ['featured-courses'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:5000/api/courses?featured=true');
-      if (!response.ok) throw new Error('Failed to fetch courses');
-      return response.json();
-    },
-  });
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await axios.get('/api/courses/featured');
+        const data = response.data;
+        
+        console.log('API Response:', data); // Debug log
+        
+        // Ensure the response data is an array and has the expected shape
+        if (!Array.isArray(data)) {
+          console.error('Expected array of courses but got:', typeof data, data);
+          setError('Failed to load content. Please try again later.');
+          setFeaturedCourses([]);
+          return;
+        }
+
+        // Validate each course object has required properties
+        const validCourses = data.filter((course): course is Course => {
+          const isValid = course &&
+            typeof course === 'object' &&
+            typeof course.id === 'string' &&
+            typeof course.title === 'string' &&
+            typeof course.description === 'string' &&
+            typeof course.price === 'number' &&
+            typeof course.thumbnail === 'string' &&
+            typeof course.instructor === 'string' &&
+            typeof course.enrollments === 'number';
+            
+          if (!isValid) {
+            console.error('Invalid course object:', course);
+          }
+          return isValid;
+        });
+        
+        setFeaturedCourses(validCourses);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        if (axios.isAxiosError(error)) {
+          console.error('Response:', error.response?.data);
+          console.error('Status:', error.response?.status);
+        }
+        setError('Failed to load content. Please try again later.');
+        setFeaturedCourses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const renderFeaturedCourses = () => {
+    if (error) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-destructive">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return Array(3).fill(null).map((_, i) => (
+        <div key={i} className="bg-card rounded-xl shadow-lg overflow-hidden animate-pulse">
+          <div className="w-full h-48 bg-muted" />
+          <div className="p-6 space-y-4">
+            <div className="h-6 bg-muted rounded w-3/4" />
+            <div className="h-4 bg-muted rounded w-full" />
+            <div className="h-4 bg-muted rounded w-2/3" />
+            <div className="flex justify-between items-center">
+              <div className="h-6 bg-muted rounded w-20" />
+              <div className="h-10 bg-muted rounded w-28" />
+            </div>
+          </div>
+        </div>
+      ));
+    }
+
+    if (!featuredCourses || featuredCourses.length === 0) {
+      return (
+        <div className="col-span-3 text-center py-8">
+          <p className="text-muted-foreground">No featured courses available at the moment.</p>
+        </div>
+      );
+    }
+
+    return featuredCourses.map((course) => (
+      <div
+        key={course.id}
+        className="bg-card rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+      >
+        <img
+          src={course.thumbnail}
+          alt={course.title}
+          className="w-full h-48 object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/course-placeholder.jpg';
+          }}
+        />
+        <div className="p-6">
+          <h4 className="text-xl font-semibold mb-2">{course.title}</h4>
+          <p className="text-muted-foreground mb-2">
+            {course.description}
+          </p>
+          <p className="text-sm text-muted-foreground mb-4">
+            By {course.instructor} • {course.enrollments} students
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="text-primary font-semibold">
+              ${course.price.toFixed(2)}
+            </span>
+            <Link to={`/courses/${course.id}`}>
+              <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                Learn More
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
+  const FeaturedCoursesSection = () => (
+    <section className="py-20">
+      <div className="container mx-auto px-6">
+        <h3 className="text-3xl font-bold text-center mb-16 text-foreground">
+          Featured Courses
+        </h3>
+        <div className="grid md:grid-cols-3 gap-8">
+          {renderFeaturedCourses()}
+        </div>
+      </div>
+    </section>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gray-900 py-32">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 to-gray-900/50" />
-        <div className="absolute inset-0">
-          <img
-            src="/hero-background.jpg"
-            alt="Students learning"
-            className="h-full w-full object-cover opacity-30"
-          />
-        </div>
-        <div className="relative container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl"
-          >
-            <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl">
-              Transform Your Future with CodeSpring
-            </h1>
-            <p className="mt-6 text-xl text-gray-300">
-              Master the latest technologies with expert-led courses. Join thousands of students learning to code and advancing their careers.
+    <div className="w-full min-h-screen bg-background">
+      <header className="w-full min-h-[600px] bg-gradient-to-br from-primary to-primary-foreground text-white">
+        <nav className="container mx-auto px-6 py-6 flex justify-between items-center">
+          <Link to="/" className="text-2xl font-bold">Codespring</Link>
+          <div className="hidden md:flex space-x-8">
+            <Link to="/courses" className="hover:opacity-80">Courses</Link>
+            <Link to="/about" className="hover:opacity-80">About</Link>
+            <Link to="/instructors" className="hover:opacity-80">Instructors</Link>
+          </div>
+          <div className="flex space-x-4">
+            <Link to="/login">
+              <button className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20">
+                Sign In
+              </button>
+            </Link>
+            <Link to="/signup">
+              <button className="px-4 py-2 rounded-lg bg-accent text-accent-foreground hover:bg-accent/90">
+                Sign Up
+              </button>
+            </Link>
+          </div>
+        </nav>
+        <div className="container mx-auto px-6 pt-20 pb-32">
+          <div className="max-w-2xl">
+            <h2 className="text-5xl font-bold mb-6">
+              Master Coding with Codespring
+            </h2>
+            <p className="text-xl mb-8 text-white/90">
+              Learn from expert instructors, build real projects, and join a
+              community of passionate developers.
             </p>
-            <div className="mt-10 flex gap-4">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90"
-                asChild
-              >
-                <Link to="/courses">Explore Courses</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-white border-white hover:bg-white/10"
-                asChild
-              >
-                <Link to="/signup">Get Started</Link>
-              </Button>
+            <Link to="/signup">
+              <button className="px-8 py-4 bg-accent text-accent-foreground rounded-lg text-lg font-semibold hover:bg-accent/90 flex items-center gap-2">
+                Get Started <ArrowRight className="w-5 h-5" />
+              </button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="py-20 bg-muted">
+        <div className="container mx-auto px-6">
+          <h3 className="text-3xl font-bold text-center mb-16 text-foreground">
+            Why Choose Codespring?
+          </h3>
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-8 h-8 text-primary" />
+              </div>
+              <h4 className="text-xl font-semibold mb-4">Interactive Learning</h4>
+              <p className="text-muted-foreground">
+                Learn by doing with hands-on projects and real-world applications
+              </p>
             </div>
-          </motion.div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-6">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h4 className="text-xl font-semibold mb-4">Expert Instructors</h4>
+              <p className="text-muted-foreground">
+                Learn from industry professionals with years of experience
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-6">
+                <MessageCircle className="w-8 h-8 text-primary" />
+              </div>
+              <h4 className="text-xl font-semibold mb-4">
+                Collaborative Community
+              </h4>
+              <p className="text-muted-foreground">
+                Connect with peers, share knowledge, and grow together
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Featured Courses Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Featured Courses
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Start your learning journey with our most popular courses
+      <FeaturedCoursesSection />
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-gradient-to-br from-green-50/50 to-white dark:from-green-950/30 dark:to-gray-950">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4">What Our Students Say</h2>
+            <p className="text-muted-foreground">
+              Join thousands of satisfied students who have transformed their careers through our courses.
             </p>
-          </motion.div>
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {courses?.slice(0, 3).map((course) => (
-              <CourseCard key={course.id} course={course} />
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {TESTIMONIALS.map((testimonial) => (
+              <div
+                key={testimonial.id}
+                className="bg-white dark:bg-gray-950 p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-green-100 dark:border-green-900"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <img
+                    src={testimonial.studentAvatar}
+                    alt={testimonial.studentName}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-green-200 dark:border-green-800"
+                  />
+                  <div>
+                    <h4 className="font-semibold text-lg">{testimonial.studentName}</h4>
+                    <p className="text-green-600 dark:text-green-400">{testimonial.studentRole}</p>
+                  </div>
+                </div>
+                <blockquote className="relative">
+                  <span className="absolute top-0 left-0 text-6xl text-green-200 dark:text-green-800/30">"</span>
+                  <p className="text-muted-foreground relative z-10 pl-6 pt-4">
+                    {testimonial.content}
+                  </p>
+                </blockquote>
+                <div className="mt-6 flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className="w-5 h-5 fill-current text-yellow-400"
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Become an Instructor Section */}
-      <section className="bg-gray-50 dark:bg-gray-900/50 py-24">
-        <div className="container mx-auto px-4">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Come teach with us
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Become an instructor and change lives — including your own. Share your knowledge and experience with students worldwide.
+          <div className="mt-16 text-center">
+            <div className="inline-flex items-center gap-8 p-4 bg-green-50 dark:bg-green-950/50 rounded-2xl">
+              <div className="flex -space-x-4">
+                {TESTIMONIALS.map((testimonial) => (
+                  <img
+                    key={testimonial.id}
+                    src={testimonial.studentAvatar}
+                    alt=""
+                    className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-950"
+                  />
+                ))}
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 text-sm font-medium border-2 border-white dark:border-gray-950">
+                  +2k
+                </div>
+              </div>
+              <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                Join over 2,000 students already learning with us!
               </p>
-              <div className="mt-8">
-                <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
-                  <Link to="/instructor/signup">Start Teaching</Link>
-                </Button>
-              </div>
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div>
-                  <h3 className="text-2xl font-bold text-foreground">45K+</h3>
-                  <p className="text-muted-foreground">Active students</p>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-foreground">200+</h3>
-                  <p className="text-muted-foreground">Courses</p>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-foreground">12M+</h3>
-                  <p className="text-muted-foreground">Revenue generated</p>
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="relative"
-            >
-              <img
-                src="/instructor.jpg"
-                alt="Become an instructor"
-                className="rounded-lg shadow-xl"
-              />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="text-center"
-          >
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Why choose CodeSpring?
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              We provide the tools and skills you need to succeed in today's tech world
-            </p>
-          </motion.div>
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.0 }}
-              className="text-center"
-            >
-              <div className="mx-auto h-12 w-12 text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
-                </svg>
-              </div>
-              <h3 className="mt-6 text-lg font-semibold text-foreground">Expert Instructors</h3>
-              <p className="mt-2 text-muted-foreground">Learn from industry professionals with real-world experience</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
-              className="text-center"
-            >
-              <div className="mx-auto h-12 w-12 text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                </svg>
-              </div>
-              <h3 className="mt-6 text-lg font-semibold text-foreground">Comprehensive Curriculum</h3>
-              <p className="mt-2 text-muted-foreground">Well-structured courses covering both basics and advanced topics</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.4 }}
-              className="text-center"
-            >
-              <div className="mx-auto h-12 w-12 text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                </svg>
-              </div>
-              <h3 className="mt-6 text-lg font-semibold text-foreground">Community Support</h3>
-              <p className="mt-2 text-muted-foreground">Connect with fellow learners and get help when you need it</p>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>

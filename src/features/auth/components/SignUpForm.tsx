@@ -39,7 +39,8 @@ export function SignUpForm() {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      // Sign up
+      const signupResponse = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,12 +48,32 @@ export function SignUpForm() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
+      if (!signupResponse.ok) {
+        const error = await signupResponse.json();
         throw new Error(error.message || 'Failed to create account');
       }
 
-      navigate('/login');
+      // Automatically log in
+      const loginResponse = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error('Account created but failed to log in. Please try logging in manually.');
+      }
+
+      const { token } = await loginResponse.json();
+      localStorage.setItem('token', token);
+
+      // Redirect to onboarding
+      navigate('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {

@@ -14,6 +14,12 @@ export function DashboardRedirect() {
       return;
     }
 
+    // Check if user has completed onboarding
+    if (!user.hasCompletedOnboarding) {
+      navigate('/onboarding');
+      return;
+    }
+
     switch (user.role) {
       case 'STUDENT':
         navigate('/dashboard/student');

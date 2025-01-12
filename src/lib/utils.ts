@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+}
+
 export function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -12,7 +19,6 @@ export function formatPrice(price: number) {
   }).format(price);
 }
 
-export const formatCurrency = formatPrice;
 
 export function calculateProgress(lessonProgress: any[] = []) {
   if (!lessonProgress || lessonProgress.length === 0) return 0;
@@ -36,4 +42,11 @@ export function generateCredentialId(courseId: string, userId: string) {
 export function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+export function formatDate(date: string | number | Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(date));
 } 
