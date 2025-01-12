@@ -28,48 +28,36 @@ export function PaymentModal({
 
   const handlePayment = async () => {
     try {
-      const token = localStorage.getItem('token');
       setIsProcessing(true);
       
       // In development mode, create enrollment directly
       if (isDev) {
         console.log('Submitting enrollment for course:', courseId);
         
-        // Create enrollment
-        const response = await fetch('http://localhost:5000/api/courses/' + courseId + '/enroll', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-			'Authorization': `Bearer ${token}`,
-			
-          },
-          credentials: 'include',
-        });
-
-        console.log('Response status:', response.status);
-        const data = await response.text();
-        console.log('Response data:', data);
-
-        try {
-          const jsonData = JSON.parse(data);
-          if (!response.ok) {
-            throw new Error(jsonData.error || 'Failed to create enrollment');
+        const response = await api.post(
+          `/courses/${courseId}/enroll`,
+          {},
+          { 
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true 
           }
-          
-          onPaymentComplete();
-          toast.success('Successfully enrolled in course!');
-        } catch (e) {
-          throw new Error('Invalid response from server: ' + data);
-        }
-        return;
-      }
+        );
 
-      // Regular payment processing for production
-      // TODO: Integrate with payment gateway
-      
+        if (!response.data.success) {
+          throw new Error('Enrollment failed');
+        }
+
+        // Update the user's enrolled courses in auth context
+        await updateUser();
+        
+        toast.success('Successfully enrolled in course!');
+        onPaymentComplete();
+      } else {
+        // Handle production payment flow here
+      }
     } catch (error) {
-      console.error('Enrollment error:', error);
-      toast.error(error instanceof Error ? error.message : 'Enrollment failed. Please try again.');
+      console.error('Error enrolling in course:', error);
+      toast.error('Failed to enroll in course. Please try again.');
     } finally {
       setIsProcessing(false);
       onClose();

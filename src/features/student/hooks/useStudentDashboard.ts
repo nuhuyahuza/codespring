@@ -52,12 +52,16 @@ async function fetchDashboard(token: string): Promise<DashboardData> {
 
 export function useStudentDashboard() {
   const { token } = useAuth();
-
+  
   return useQuery({
-    queryKey: ["studentDashboard"],
-    queryFn: () => fetchDashboard(token!),
-    enabled: !!token,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    staleTime: 60 * 1000, // Consider data stale after 1 minute
+    queryKey: ['studentDashboard'],
+    queryFn: async () => {
+      const response = await api.get('/student/dashboard', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 } 

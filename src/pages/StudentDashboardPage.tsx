@@ -9,21 +9,23 @@ import { UpcomingSessions } from '@/features/student/components/UpcomingSessions
 import { Certificates } from '@/features/student/components/Certificates';
 import { BookOpen, Clock, Award, BarChart, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/utils';
-import { useAuth } from '@/features/auth/contexts/AuthContext';
+import { useAuth } from '@/features/auth';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
 
 export function StudentDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const { data: dashboard, isLoading, error } = useStudentDashboard();
+  const { data: dashboard, isLoading, error, refetch } = useStudentDashboard();
 
   useEffect(() => {
-    // If user has no enrolled courses, redirect to courses page
-    if (user?.role === 'STUDENT' && (!user.enrolledCourses || user.enrolledCourses.length === 0)) {
-      navigate('/courses');
+    // Refetch dashboard data when user changes
+    if (user) {
+      refetch();
     }
-  }, [user, navigate]);
+  }, [user, refetch]);
 
   if (isLoading) {
     return (
@@ -42,11 +44,23 @@ export function StudentDashboardPage() {
     );
   }
 
-  if (!dashboard) {
+  // Show empty state if no courses are enrolled
+  if (!dashboard || dashboard.allCourses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h2 className="text-xl font-semibold text-destructive">No dashboard data available</h2>
-        <p className="text-muted-foreground">Please try again later</p>
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center space-y-4 min-h-[60vh]">
+          <BookOpen className="h-16 w-16 text-muted-foreground" />
+          <h2 className="text-2xl font-semibold text-center">No Enrolled Courses</h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            You haven't enrolled in any courses yet. Start your learning journey today!
+          </p>
+          <Button 
+            onClick={() => navigate('/courses')}
+            className="mt-4"
+          >
+            Browse Courses
+          </Button>
+        </div>
       </div>
     );
   }

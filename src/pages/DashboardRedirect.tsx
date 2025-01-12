@@ -20,9 +20,10 @@ export function DashboardRedirect() {
       return;
     }
 
+    // Always navigate to the role-specific dashboard, let the dashboard handle empty states
     switch (user.role) {
       case 'STUDENT':
-        navigate('/dashboard/student');
+        navigate('/dashboard/student/courses');
         break;
       case 'INSTRUCTOR':
         navigate('/dashboard/instructor');

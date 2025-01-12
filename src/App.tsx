@@ -14,6 +14,8 @@ import { CoursesPage } from '@/pages/courses';
 import { CourseDetailsPage } from '@/pages/courses/CourseDetailsPage';
 import { InstructorsPage } from '@/pages/InstructorsPage';
 import { AboutPage } from '@/pages/AboutPage';
+import { StudentDashboardPage } from '@/pages/StudentDashboardPage';
+import { InstructorDashboardPage } from '@/pages/InstructorDashboardPage';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -30,7 +32,7 @@ function App() {
           <Route path="/instructors" element={<InstructorsPage />} />
           <Route path="/about" element={<AboutPage />} />
           
-          {/* Auth routes - redirect if already authenticated */}
+          {/* Auth routes */}
           <Route 
             path="/login" 
             element={
@@ -61,12 +63,16 @@ function App() {
             path="/dashboard/*"
             element={
               <ProtectedRoute>
-                <DashboardRedirect />
+                <Routes>
+                  <Route index element={<DashboardRedirect />} />
+                  <Route path="student/*" element={<StudentDashboardPage />} />
+                  <Route path="instructor/*" element={<InstructorDashboardPage />} />
+                </Routes>
               </ProtectedRoute>
             }
           />
 
-          {/* Catch all route - only redirect unknown paths */}
+          {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </RootLayout>

@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +17,11 @@ export function ProtectedRoute({
   const location = useLocation();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // Not authenticated - redirect to login
@@ -29,14 +34,9 @@ export function ProtectedRoute({
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Handle onboarding redirection - only if requireOnboarding is true and user hasn't completed it
-  if (requireOnboarding && user && !user.hasCompletedOnboarding) {
+  // Handle onboarding redirection
+  if (requireOnboarding && user?.hasCompletedOnboarding === false) {
     return <Navigate to="/onboarding" replace />;
-  }
-
-  // For students who have completed onboarding but haven't enrolled in any courses
-  if (user?.role === 'STUDENT' && user?.hasCompletedOnboarding && location.pathname === '/dashboard') {
-    return <Navigate to="/courses" replace />;
   }
 
   return <>{children}</>;
