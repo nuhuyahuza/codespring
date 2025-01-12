@@ -13,6 +13,7 @@ import courseRoutes from './routes/courses';
 import submissionRoutes from './routes/submissions';
 import groupRoutes from './routes/groups';
 import studentRoutes from './routes/student';
+import testimonialRoutes from './routes/testimonials';
 
 // WebSocket
 import { setupChatServer } from './websocket/chat';
@@ -48,6 +49,7 @@ app.use('/api', courseRoutes);
 app.use('/api', submissionRoutes);
 app.use('/api', groupRoutes);
 app.use('/api', studentRoutes);
+app.use('/api/testimonials', testimonialRoutes);
 
 // Setup WebSocket
 setupChatServer(io);

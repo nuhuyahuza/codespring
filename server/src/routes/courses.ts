@@ -392,4 +392,53 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
   }
 });
 
+// Get featured courses
+router.get('/featured', async (req, res) => {
+  try {
+    const featuredCourses = await prisma.course.findMany({
+      take: 3,
+      where: {
+        status: 'PUBLISHED',
+      },
+      orderBy: [
+        {
+          enrollments: {
+            _count: 'desc'
+          }
+        },
+        {
+          createdAt: 'desc'
+        }
+      ],
+      include: {
+        instructor: {
+          select: {
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            enrollments: true,
+          },
+        },
+      },
+    });
+
+    const formattedCourses = featuredCourses.map(course => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      price: course.price,
+      thumbnail: course.imageUrl || '/course-placeholder.jpg',
+      instructor: course.instructor.name,
+      enrollments: course._count.enrollments,
+    }));
+
+    res.json(formattedCourses);
+  } catch (error) {
+    console.error('Error fetching featured courses:', error);
+    res.status(500).json({ error: 'Failed to fetch featured courses' });
+  }
+});
+
 export default router; 
