@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
+import { NEXTAUTH_CONFIG } from "./next-auth-config";
 
 export const authOptions: NextAuthOptions = {
   pages: {
@@ -47,6 +48,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  secret: NEXTAUTH_CONFIG.secret,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

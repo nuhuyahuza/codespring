@@ -14,6 +14,7 @@ export interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -22,4 +23,5 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isLoading: false,
   error: null,
+  isAuthenticated: false
 }); 

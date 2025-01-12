@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { useAuth } from '@/features/auth';
+import { CartProvider } from '@/contexts/CartContext';
 
 // Import your pages
 import { LandingPage } from '@/pages/LandingPage';
@@ -19,55 +20,57 @@ function App() {
   const location = useLocation();
 
   return (
-    <RootLayout>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
-        <Route path="/instructors" element={<InstructorsPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        
-        {/* Auth routes - redirect if already authenticated */}
-        <Route 
-          path="/login" 
-          element={
-            isAuthenticated ? 
-              <Navigate to="/dashboard" state={{ from: location }} replace /> : 
-              <LoginPage />
-          } 
-        />
-        <Route 
-          path="/signup" 
-          element={
-            isAuthenticated ? 
-              <Navigate to="/dashboard" state={{ from: location }} replace /> : 
-              <SignUpPage />
-          } 
-        />
+    <CartProvider>
+      <RootLayout>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/instructors" element={<InstructorsPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          
+          {/* Auth routes - redirect if already authenticated */}
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? 
+                <Navigate to="/dashboard" state={{ from: location }} replace /> : 
+                <LoginPage />
+            } 
+          />
+          <Route 
+            path="/signup" 
+            element={
+              isAuthenticated ? 
+                <Navigate to="/dashboard" state={{ from: location }} replace /> : 
+                <SignUpPage />
+            } 
+          />
 
-        {/* Protected routes */}
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute requireOnboarding={false}>
-              <UserOnboardingPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/*"
-          element={
-            <ProtectedRoute>
-              <DashboardRedirect />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected routes */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute requireOnboarding={false}>
+                <UserOnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
+                <DashboardRedirect />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Catch all route - only redirect unknown paths */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </RootLayout>
+          {/* Catch all route - only redirect unknown paths */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </RootLayout>
+    </CartProvider>
   );
 }
 

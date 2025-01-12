@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Users, Clock, BookOpen, CheckCircle, Play, Award } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/features/auth';
+import { useCart } from '@/contexts/CartContext';
 import axios from 'axios';
 import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
 import { PaymentModal } from '@/components/payment/PaymentModal';
@@ -79,7 +80,8 @@ const SAMPLE_COURSE: Course = {
 
 export function CourseDetailsPage() {
   const { courseId } = useParams();
-  const { user, isAuthenticated, addToCart } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +119,9 @@ export function CourseDetailsPage() {
       return;
     }
 
-    // Add to cart
+    if (!course) return;
+
+    // Add to cart using cart context
     addToCart({
       id: courseId!,
       title: course.title,
@@ -317,6 +321,7 @@ export function CourseDetailsPage() {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
+        courseId={courseId!}
         courseTitle={course?.title || ''}
         amount={course?.price || 0}
         onPaymentComplete={handlePaymentComplete}

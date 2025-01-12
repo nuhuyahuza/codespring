@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import type { User, CartItem } from '../types';
 
 export interface AuthContextType {
   user: User | null;
   cart: CartItem[];
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -16,44 +15,66 @@ export interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  cart: [],
+  login: async () => { throw new Error('Not implemented') },
+  logout: () => {},
+  isLoading: false,
+  error: null,
+  addToCart: () => {},
+  removeFromCart: () => {},
+  clearCart: () => {},
+  isAuthenticated: false
+});
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const decoded = jwtDecode<{ userId: string; email: string; role: string }>(token);
-          // Fetch user data from API
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            localStorage.removeItem('token');
-          }
-        } catch (err) {
-          console.error('Token validation error:', err);
-          localStorage.removeItem('token');
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setUser(null);
+          setIsLoading(false);
+          setIsInitialized(true);
+          return;
         }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        } else {
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
       }
-      setIsLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
+    setIsLoading(true);
     try {
       setError(null);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
@@ -62,16 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        throw new Error(data.message || 'Invalid credentials');
       }
 
-      const data = await response.json();
       localStorage.setItem('token', data.token);
       setUser(data.user);
+      return data.user;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -98,28 +123,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCart([]);
   };
 
+  // Don't render anything until auth is initialized
+  if (!isInitialized) {
+    return null;
+  }
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      cart,
-      login,
-      logout,
-      isLoading,
-      error,
-      addToCart,
-      removeFromCart,
-      clearCart,
-      isAuthenticated: !!user
-    }}>
+    <AuthContext.Provider 
+      value={{
+        user,
+        cart,
+        login,
+        logout,
+        isLoading,
+        error,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        isAuthenticated: !!user
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}
+
+export { AuthContext, AuthProvider, useAuth }; 

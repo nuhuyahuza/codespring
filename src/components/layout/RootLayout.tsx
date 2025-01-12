@@ -3,7 +3,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/features/auth';
 import { ShoppingCart } from '@/components/cart/ShoppingCart';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function RootLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -13,21 +13,11 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   // Don't show header on auth pages
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
-
-  useEffect(() => {
-    if (isAuthPage && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthPage, isAuthenticated, navigate]);
-
-  if (isAuthPage && isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background">

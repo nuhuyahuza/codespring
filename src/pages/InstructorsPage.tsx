@@ -31,7 +31,7 @@ export function InstructorsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get('/api/instructors');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/instructors`);
         setInstructors(response.data);
       } catch (error) {
         console.error('Error fetching instructors:', error);

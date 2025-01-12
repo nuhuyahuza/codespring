@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const existingEnrollment = await prisma.enrollment.findUnique({
       where: {
         userId_courseId: {
-          userId: session.user.id,
+          userId: session?.user?.id,
           courseId,
         },
       },

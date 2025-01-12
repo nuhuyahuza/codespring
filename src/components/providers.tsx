@@ -2,16 +2,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { PaymentProvider } from '@/features/payment/context/PaymentContext';
 import { StripeProvider } from '@/features/payment/components/StripeProvider';
+import { ReactNode } from 'react';
+import { CartProvider } from '@/contexts/CartContext';
 
 const queryClient = new QueryClient();
 
-export function Providers({ children }: { children: React.ReactNode }) {
+interface ProvidersProps {
+  children: ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PaymentProvider>
           <StripeProvider>
-            {children}
+            <CartProvider>
+              {children}
+            </CartProvider>
           </StripeProvider>
         </PaymentProvider>
       </AuthProvider>

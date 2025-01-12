@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert } from '@/components/ui/alert';
-import { useAuth } from '@/features/auth/hooks/useAuth';
 import { SocialLoginButton } from './SocialLoginButton';
 import { Loader2 } from 'lucide-react';
-
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '../hooks/useAuth';
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
@@ -19,10 +19,17 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isLoading, user, isAuthenticated } = useAuth();
+
+  // Handle initial auth state
+  useEffect(() => {
+    if (isAuthenticated && user && !isLoading && !isSubmitting) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, isLoading, navigate, isSubmitting]);
 
   const {
     register,
@@ -33,22 +40,47 @@ export function LoginForm() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    if (isSubmitting) return;
+    
     try {
-      setIsLoading(true);
       setError(null);
+      setIsSubmitting(true);
       await login(data.email, data.password);
-      navigate('/dashboard');
+      
+      // Show success message and navigate
+      toast({
+        title: "Login Successful",
+        description: "Welcome back! Redirecting to dashboard...",
+      });
     } catch (err) {
+      console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: err instanceof Error ? err.message : 'Invalid credentials',
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleSocialLogin = (provider: 'google' | 'facebook') => {
-    // Implement social login
-    console.log(`Login with ${provider}`);
-  };
+  // Show loading state
+  if (isLoading || (isSubmitting && !error)) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">
+          {isSubmitting ? "Signing in..." : "Loading..."}
+        </p>
+      </div>
+    );
+  }
+
+  // Already authenticated
+  if (isAuthenticated && user) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -56,12 +88,12 @@ export function LoginForm() {
       <div className="grid gap-4">
         <SocialLoginButton
           provider="google"
-          onClick={() => handleSocialLogin('google')}
+          onClick={() => console.log('Google login')}
           className="w-full"
         />
         <SocialLoginButton
           provider="facebook"
-          onClick={() => handleSocialLogin('facebook')}
+          onClick={() => console.log('Facebook login')}
           className="w-full"
         />
       </div>
