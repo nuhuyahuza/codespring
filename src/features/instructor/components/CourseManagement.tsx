@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
 import {
   Table,
   TableBody,
@@ -18,169 +8,161 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  MoreVertical,
+  Plus,
+  Search,
+  Edit,
+  Trash,
+  Users,
+  BookOpen,
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/utils';
-import { Star, Edit, Archive } from 'lucide-react';
+import { CreateCourseDialog } from './CreateCourseDialog';
 
 interface Course {
   id: string;
   title: string;
-  thumbnail: string;
-  category: string;
+  description: string;
   price: number;
-  enrollmentCount: number;
-  rating: number;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  lastUpdated: string;
+  category: string;
+  level: string;
+  duration: number;
+  imageUrl: string | null;
+  _count: {
+    enrollments: number;
+    lessons: number;
+  };
+  updatedAt: string;
 }
 
-interface CourseManagementProps {
-  courses: Course[];
-}
+export function CourseManagement() {
+  const { token } = useAuth();
+  const [search, setSearch] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-export function CourseManagement({ courses }: CourseManagementProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch = course.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all' || course.status === statusFilter;
-    const matchesCategory =
-      categoryFilter === 'all' || course.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+  const { data: courses, isLoading } = useQuery<Course[]>({
+    queryKey: ['instructor-courses'],
+    queryFn: () => api.get('/api/instructor/courses', token),
   });
 
-  const categories = ['all', ...new Set(courses.map((course) => course.category))];
-  const statuses = ['all', 'DRAFT', 'PUBLISHED', 'ARCHIVED'];
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const filteredCourses = courses?.filter(course =>
+    course.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Your Courses</h2>
-        <Link to="/instructor/courses/new">
-          <Button>Create New Course</Button>
-        </Link>
+    <div className="space-y-4">
+      <div className="flex justify-between">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search courses..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-[300px]"
+            icon={<Search className="h-4 w-4" />}
+          />
+        </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Course
+        </Button>
       </div>
 
-      <div className="flex gap-4 items-center">
-        <Input
-          placeholder="Search courses..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statuses.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category?.charAt(0).toUpperCase() + category?.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-center">Students</TableHead>
+              <TableHead className="text-center">Lessons</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
               <TableRow>
-                <TableHead>Course</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Enrollments</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableCell colSpan={7} className="text-center">
+                  Loading...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCourses.map((course) => (
+            ) : filteredCourses?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  No courses found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCourses?.map((course) => (
                 <TableRow key={course.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="h-10 w-10 rounded object-cover"
-                      />
-                      <span className="font-medium">{course.title}</span>
-                    </div>
-                  </TableCell>
+                  <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>{course.category}</TableCell>
-                  <TableCell>{formatCurrency(course.price)}</TableCell>
-                  <TableCell>{course.enrollmentCount}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-primary text-primary" />
-                      <span>{course.rating.toFixed(1)}</span>
-                    </div>
+                  <TableCell>{course.level}</TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(course.price)}
                   </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        course.status === 'PUBLISHED'
-                          ? 'bg-green-100 text-green-800'
-                          : course.status === 'DRAFT'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {course.status.toLowerCase()}
-                    </span>
+                  <TableCell className="text-center">
+                    {course._count.enrollments}
                   </TableCell>
-                  <TableCell>{formatDate(course.lastUpdated)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Link to={`/instructor/courses/${course.id}/edit`}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
+                  <TableCell className="text-center">
+                    {course._count.lessons}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          // Handle archive
-                        }}
-                      >
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => window.location.href = `/courses/${course.id}/edit`}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Course
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => window.location.href = `/courses/${course.id}/lessons`}
+                        >
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Manage Lessons
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => window.location.href = `/courses/${course.id}/students`}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          View Students
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete Course
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <CreateCourseDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+      />
     </div>
   );
 } 

@@ -16,6 +16,7 @@ import { DashboardRedirect } from "@/pages/DashboardRedirect";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Providers } from "@/components/providers";
 import { CourseContentPage } from "@/pages/CourseContentPage";
+import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,18 @@ function App() {
 
           {/* Dashboard Redirect */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
+
+          {/* Protected Admin Routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }>
+            <Route index element={<div>Admin Overview</div>} />
+            <Route path="users" element={<div>Users Management</div>} />
+            <Route path="courses" element={<div>Courses Management</div>} />
+            <Route path="reports" element={<div>System Reports</div>} />
+          </Route>
 
           {/* Protected Student Routes */}
           <Route

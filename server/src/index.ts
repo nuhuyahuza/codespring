@@ -9,6 +9,7 @@ import courseRoutes from './routes/courses';
 import submissionRoutes from './routes/submissions';
 import groupRoutes from './routes/groups';
 import studentRoutes from './routes/student';
+import instructorRoutes from './routes/instructor';
 import { setupChatServer } from './websocket/chat';
 
 dotenv.config();
@@ -32,6 +33,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files
+app.use('/uploads', express.static('uploads'));
+
 // Health Check Route
 app.get('/api/health', (req, res) => {
   res.json({
@@ -47,7 +51,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/groups', groupRoutes);
-app.use('/api', studentRoutes);
+app.use('/api/student', studentRoutes);
+app.use('/api/instructor', instructorRoutes);
 
 // Setup WebSocket chat server
 setupChatServer(io);

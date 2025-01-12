@@ -7,7 +7,7 @@ import { EnrolledCourses } from '@/features/student/components/EnrolledCourses';
 import { LearningProgress } from '@/features/student/components/LearningProgress';
 import { UpcomingSessions } from '@/features/student/components/UpcomingSessions';
 import { Certificates } from '@/features/student/components/Certificates';
-import { BookOpen, Clock, Award, BarChart } from 'lucide-react';
+import { BookOpen, Clock, Award, BarChart, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/utils';
 
 export function StudentDashboardPage() {
@@ -17,7 +17,7 @@ export function StudentDashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin">⌛</div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -35,6 +35,7 @@ export function StudentDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-semibold text-destructive">No dashboard data available</h2>
+        <p className="text-muted-foreground">Please try again later</p>
       </div>
     );
   }

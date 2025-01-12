@@ -13,6 +13,7 @@ async function main() {
     await prisma.message.deleteMany();
     await prisma.groupMember.deleteMany();
     await prisma.group.deleteMany();
+    await prisma.submission.deleteMany();
     await prisma.lessonProgress.deleteMany();
     await prisma.lesson.deleteMany();
     await prisma.enrollment.deleteMany();
@@ -58,6 +59,10 @@ async function main() {
         title: 'Web Development Fundamentals',
         description: 'Learn the basics of web development including HTML, CSS, and JavaScript.',
         price: 99.99,
+        category: 'development',
+        level: 'beginner',
+        duration: 30,
+        imageUrl: '/courses/web-dev-intro.jpg',
         instructorId: instructor.id,
         lessons: {
           create: [
@@ -80,12 +85,22 @@ async function main() {
 
     console.log('Creating enrollments...');
     // Create enrollment
-    await prisma.enrollment.create({
+    const enrollment = await prisma.enrollment.create({
       data: {
         userId: student.id,
         courseId: webDevCourse.id,
         status: 'active',
         progress: 0.25,
+      },
+    });
+
+    // Create course review
+    await prisma.courseReview.create({
+      data: {
+        rating: 4.5,
+        comment: 'Great course for beginners!',
+        userId: student.id,
+        courseId: webDevCourse.id,
       },
     });
 

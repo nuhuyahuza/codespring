@@ -106,31 +106,22 @@ export async function GET() {
     });
 
     // Process and format the data
-    const formattedCourses = enrollments.map((enrollment) => ({
-      id: enrollment.course.id,
-      title: enrollment.course.title,
-      instructor: enrollment.course.instructor.name,
-      thumbnail: enrollment.course.imageUrl,
-      progress: calculateProgress(
-        enrollment.course.lessons.flatMap((l) => l.progress)
-      ),
-      lastAccessedAt: enrollment.updatedAt,
-    }));
+    const formattedCourses = enrollments.map((enrollment) => {
+      const totalLessons = enrollment.course.lessons.length;
+      const completedLessons = enrollment.course.lessons.filter(
+        (lesson) => lesson.progress.length > 0 && lesson.progress[0].completed
+      ).length;
+      const progress = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
 
-    const formattedCertificates = certificates.map((cert) => ({
-      id: cert.id,
-      courseTitle: cert.course.title,
-      issueDate: cert.issueDate.toISOString(),
-      credential: cert.credentialId,
-    }));
-
-    const formattedSessions = upcomingSessions.map((session) => ({
-      id: session.id,
-      courseTitle: session.course.title,
-      startTime: session.startTime.toISOString(),
-      duration: session.duration,
-      instructor: session.instructor.name,
-    }));
+      return {
+        id: enrollment.course.id,
+        title: enrollment.course.title,
+        instructor: enrollment.course.instructor.name,
+        thumbnail: enrollment.course.imageUrl,
+        progress: Math.round(progress),
+        lastAccessedAt: enrollment.updatedAt,
+      };
+    });
 
     // Calculate daily progress stats
     const progressByDay = lessonProgress.reduce((acc, progress) => {
@@ -141,7 +132,7 @@ export async function GET() {
           lessonsCompleted: 0,
         };
       }
-      acc[date].hoursSpent += progress.timeSpent / 60;
+      acc[date].hoursSpent += progress.timeSpent / 3600; // Convert to hours
       if (progress.completed) {
         acc[date].lessonsCompleted += 1;
       }
@@ -158,12 +149,14 @@ export async function GET() {
       enrolledCourses: formattedCourses.length,
       activeCourses: formattedCourses.filter((c) => c.progress < 100).length,
       hoursLearned: Math.round(
-        lessonProgress.reduce((acc, p) => acc + p.timeSpent / 60, 0)
+        lessonProgress.reduce((acc, p) => acc + p.timeSpent / 3600, 0)
       ),
-      certificateCount: formattedCertificates.length,
+      certificateCount: certificates.length,
       averageProgress:
-        formattedCourses.reduce((acc, c) => acc + c.progress, 0) /
-        formattedCourses.length,
+        Math.round(
+          formattedCourses.reduce((acc, c) => acc + c.progress, 0) /
+            (formattedCourses.length || 1)
+        ),
       recentCourses: formattedCourses
         .sort(
           (a, b) =>
@@ -173,8 +166,19 @@ export async function GET() {
         .slice(0, 3),
       allCourses: formattedCourses,
       progress: progressStats,
-      upcomingSessions: formattedSessions,
-      certificates: formattedCertificates,
+      upcomingSessions: upcomingSessions.map((session) => ({
+        id: session.id,
+        courseTitle: session.course.title,
+        startTime: session.startTime.toISOString(),
+        duration: session.duration,
+        instructor: session.instructor.name,
+      })),
+      certificates: certificates.map((cert) => ({
+        id: cert.id,
+        courseTitle: cert.course.title,
+        issueDate: cert.issueDate.toISOString(),
+        credential: cert.credentialId,
+      })),
     };
 
     return NextResponse.json(dashboardData);

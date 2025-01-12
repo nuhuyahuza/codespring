@@ -10,130 +10,171 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
 model User {
-  id            String     @id @default(cuid())
+  id            String     @id @default(uuid())
   email         String     @unique
   password      String
   name          String
   role          Role       @default(STUDENT)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
-  resetToken    String?
-  resetTokenExp DateTime?
-  
+
   // Relations
-  taughtCourses Course[]  @relation("InstructorCourses")
+  courses       Course[]      @relation("InstructorCourses")
   enrollments   Enrollment[]
-  progress      LessonProgress[]
-  certificates  Certificate[]
-  attendedSessions LiveSession[] @relation("SessionAttendees")
-  instructedSessions LiveSession[]
+  submissions   Submission[]
+  groupMembers  GroupMember[]
+  messages      Message[]
+  lessonProgress LessonProgress[]
+  reviews       CourseReview[]
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String       @id @default(uuid())
   title       String
-  description String   @db.Text
+  description String       @db.Text
   price       Float
-  duration    Int      @default(0)
+  category    String       @default("other")
+  level       String       @default("beginner")
+  duration    Int         @default(0)
   imageUrl    String?
-  category    String
-  level       String   @default("BEGINNER")
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  instructor    User     @relation("InstructorCourses", fields: [instructorId], references: [id])
-  instructorId  String
-  enrollments   Enrollment[]
-  lessons       Lesson[]
-  liveSessions  LiveSession[]
-  certificates  Certificate[]
+  instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
+  instructorId String
+  enrollments Enrollment[]
+  groups      Group[]
+  lessons     Lesson[]
+  reviews     CourseReview[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([instructorId])
 }
 
 model Enrollment {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  paymentStatus String   @default("PENDING")
-  
-  // Relations
-  user        User    @relation(fields: [userId], references: [id])
-  userId      String
-  course      Course  @relation(fields: [courseId], references: [id])
-  courseId    String
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  progress  Float    @default(0)
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
+  id          String       @id @default(uuid())
   title       String
-  content     String   @db.Text
+  content     String       @db.Text
   videoUrl    String?
-  duration    Int      @default(0)
   order       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  course      Course   @relation(fields: [courseId], references: [id])
+  course      Course       @relation(fields: [courseId], references: [id])
   courseId    String
+  submissions Submission[]
   progress    LessonProgress[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model Submission {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  grade     Float?
+  feedback  String?  @db.Text
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  lessonId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lessonId])
+}
+
+model Group {
+  id          String       @id @default(uuid())
+  name        String
+  description String       @db.Text
+  course      Course       @relation(fields: [courseId], references: [id])
+  courseId    String
+  members     GroupMember[]
+  messages    Message[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
 }
 
 model LessonProgress {
-  id          String   @id @default(cuid())
-  completed   Boolean  @default(false)
-  timeSpent   Int      @default(0)
-  lastPosition Float   @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  lesson      Lesson   @relation(fields: [lessonId], references: [id])
-  lessonId    String
+  id        String   @id @default(uuid())
+  completed Boolean  @default(false)
+  timeSpent Int     @default(0)
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  lessonId  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
 }
 
-model LiveSession {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @db.Text
-  startTime   DateTime
-  duration    Int
-  meetingUrl  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  course      Course   @relation(fields: [courseId], references: [id])
-  courseId    String
-  instructor  User     @relation(fields: [instructorId], references: [id])
-  instructorId String
-  attendees   User[]   @relation("SessionAttendees")
-}
-
-model Certificate {
-  id            String   @id @default(cuid())
-  credentialId  String   @unique
-  issueDate     DateTime @default(now())
-  
-  // Relations
-  user          User     @relation(fields: [userId], references: [id])
-  userId        String
-  course        Course   @relation(fields: [courseId], references: [id])
-  courseId      String
+model CourseReview {
+  id        String   @id @default(uuid())
+  rating    Int      @db.Int
+  comment   String   @db.Text
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
-}
-
-enum Role {
-  STUDENT
-  INSTRUCTOR
-  ADMIN
+  @@index([userId])
+  @@index([courseId])
 }

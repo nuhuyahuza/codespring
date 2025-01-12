@@ -1,40 +1,33 @@
-type RequestData = FormData | Record<string, unknown>;
+import axios from 'axios';
+
+const BASE_URL = '/api';
 
 export const api = {
-  async get<T>(url: string): Promise<T> {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error('Network response was not ok');
-    return response.json();
+  get: async (endpoint: string, token?: string) => {
+    const response = await axios.get(`${BASE_URL}${endpoint}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return response.data;
   },
 
-  async post<T>(url: string, data?: RequestData): Promise<T> {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    let body: RequestData | string | undefined = data;
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    if (!(data instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-      body = data ? JSON.stringify(data) : undefined;
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body,
+  post: async (endpoint: string, data: any, token?: string) => {
+    const response = await axios.post(`${BASE_URL}${endpoint}`, data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
+    return response.data;
+  },
 
-    if (!response.ok) throw new Error('Network response was not ok');
-    return response.json();
+  put: async (endpoint: string, data: any, token?: string) => {
+    const response = await axios.put(`${BASE_URL}${endpoint}`, data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return response.data;
+  },
+
+  delete: async (endpoint: string, token?: string) => {
+    const response = await axios.delete(`${BASE_URL}${endpoint}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return response.data;
   },
 }; 

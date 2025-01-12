@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Course {
   id: string;
@@ -44,14 +45,18 @@ interface DashboardData {
   certificates: Certificate[];
 }
 
-async function fetchDashboard(): Promise<DashboardData> {
-  return api.get("/api/dashboard/student");
+async function fetchDashboard(token: string): Promise<DashboardData> {
+  const response = await api.get("/student/dashboard", token);
+  return response;
 }
 
 export function useStudentDashboard() {
+  const { token } = useAuth();
+
   return useQuery({
     queryKey: ["studentDashboard"],
-    queryFn: fetchDashboard,
+    queryFn: () => fetchDashboard(token!),
+    enabled: !!token,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     staleTime: 60 * 1000, // Consider data stale after 1 minute
   });

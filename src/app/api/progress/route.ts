@@ -3,11 +3,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
+interface SessionUser {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+}
+
+interface AuthSession {
+  user: SessionUser;
+}
+
 // POST /api/progress - Update lesson progress
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const session = await getServerSession(authOptions) as AuthSession | null;
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +39,7 @@ export async function POST(request: Request) {
     const progress = await prisma.lessonProgress.upsert({
       where: {
         userId_lessonId: {
-          userId: session.user.id,
+          userId: session?.user?.id,
           lessonId,
         },
       },
@@ -120,8 +131,8 @@ export async function POST(request: Request) {
 // GET /api/progress?courseId=xxx - Get progress for a course
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const session = await getServerSession(authOptions) as AuthSession | null;
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -137,7 +148,7 @@ export async function GET(request: Request) {
 
     const progress = await prisma.lessonProgress.findMany({
       where: {
-        userId: session.user.id,
+        userId: session?.user?.id,
         lesson: {
           courseId,
         },

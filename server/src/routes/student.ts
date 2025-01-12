@@ -1,28 +1,51 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get student dashboard data
-router.get('/dashboard/student', authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+// Type definitions
+type EnrollmentWithCourse = Prisma.EnrollmentGetPayload<{
+  include: {
+    course: {
+      include: {
+        lessons: {
+          include: {
+            progress: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
-    // Get enrolled courses with instructor info
+type DailyProgress = {
+  hoursSpent: number;
+  lessonsCompleted: number;
+};
+
+// Get student dashboard data
+router.get('/dashboard', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+
+    // Get enrolled courses with progress
     const enrollments = await prisma.enrollment.findMany({
-      where: { userId },
+      where: {
+        userId,
+      },
       include: {
         course: {
           include: {
-            instructor: {
-              select: {
-                id: true,
-                name: true,
+            instructor: true,
+            lessons: {
+              include: {
+                progress: {
+                  where: {
+                    userId,
+                  },
+                },
               },
             },
           },
@@ -30,54 +53,36 @@ router.get('/dashboard/student', authenticateUser, async (req, res) => {
       },
     });
 
-    // Calculate dashboard metrics
-    const enrolledCourses = enrollments.length;
-    const activeCourses = enrollments.filter(e => e.progress < 100).length;
-    const totalHoursLearned = enrollments.reduce((acc, e) => {
-      // Assuming each course has an average duration of 2 hours multiplied by progress percentage
-      const hoursForCourse = (2 * e.progress) / 100;
-      return acc + hoursForCourse;
-    }, 0);
+    // Calculate course progress
+    const coursesWithProgress = enrollments.map((enrollment: EnrollmentWithCourse) => {
+      const completedLessons = enrollment.course.lessons
+        .filter(lesson => lesson.progress.length > 0 && lesson.progress[0].completed)
+        .map(lesson => lesson.id);
 
-    // Calculate average progress
-    const averageProgress = enrollments.length > 0
-      ? enrollments.reduce((acc, e) => acc + e.progress, 0) / enrollments.length
-      : 0;
+      const totalProgress = enrollment.course.lessons.length > 0
+        ? completedLessons.length / enrollment.course.lessons.length
+        : 0;
 
-    // Format recent courses
-    const recentCourses = enrollments
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 5)
-      .map(e => ({
-        id: e.courseId,
-        title: e.course.title,
-        instructor: e.course.instructor.name,
-        thumbnail: null, // Add thumbnail field to Course model if needed
-        progress: e.progress,
-        lastAccessedAt: e.updatedAt.toISOString(),
-      }));
+      const totalTimeSpent = enrollment.course.lessons.reduce(
+        (total, lesson) => total + (lesson.progress[0]?.timeSpent || 0),
+        0
+      );
 
-    // Get all lessons for progress tracking
-    const lessons = await prisma.lesson.findMany({
-      where: {
-        courseId: {
-          in: enrollments.map(e => e.courseId),
-        },
-      },
-      include: {
-        submissions: {
-          where: {
-            userId,
-          },
-        },
-      },
+      return {
+        id: enrollment.course.id,
+        title: enrollment.course.title,
+        instructor: enrollment.course.instructor.name,
+        thumbnail: enrollment.course.imageUrl,
+        progress: Math.round(totalProgress * 100),
+        lastAccessedAt: enrollment.updatedAt.toISOString(),
+      };
     });
 
-    // Calculate progress data (last 30 days)
+    // Calculate daily progress (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const submissions = await prisma.submission.findMany({
+    const lessonProgress = await prisma.lessonProgress.findMany({
       where: {
         userId,
         createdAt: {
@@ -89,40 +94,69 @@ router.get('/dashboard/student', authenticateUser, async (req, res) => {
       },
     });
 
-    // Group submissions by date
-    const progressByDate = submissions.reduce((acc: Record<string, { hoursSpent: number, lessonsCompleted: number }>, sub) => {
-      const date = sub.createdAt.toISOString().split('T')[0];
+    // Group progress by date
+    const progressByDate = lessonProgress.reduce<Record<string, DailyProgress>>((acc, progress) => {
+      const date = progress.createdAt.toISOString().split('T')[0];
       if (!acc[date]) {
         acc[date] = { hoursSpent: 0, lessonsCompleted: 0 };
       }
-      acc[date].lessonsCompleted += 1;
-      acc[date].hoursSpent += 1; // Assuming 1 hour per submission
+      acc[date].lessonsCompleted += progress.completed ? 1 : 0;
+      acc[date].hoursSpent += progress.timeSpent / 3600; // Convert seconds to hours
       return acc;
     }, {});
 
-    const progress = Object.entries(progressByDate).map(([date, data]) => ({
+    const dailyProgress = Object.entries(progressByDate).map(([date, data]) => ({
       date,
-      ...data,
+      hoursSpent: data.hoursSpent,
+      lessonsCompleted: data.lessonsCompleted,
     }));
 
-    // Format response
+    // Get certificates
+    const certificates = await prisma.certificate.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        course: true,
+      },
+      orderBy: {
+        issueDate: 'desc',
+      },
+    });
+
+    // Compile dashboard data
     const dashboardData = {
-      enrolledCourses,
-      activeCourses,
-      hoursLearned: Math.round(totalHoursLearned * 10) / 10,
-      certificateCount: 0, // Implement certificates later
-      averageProgress,
-      recentCourses,
-      allCourses: recentCourses,
-      progress,
-      upcomingSessions: [], // Implement live sessions later
-      certificates: [], // Implement certificates later
+      enrolledCourses: coursesWithProgress.length,
+      activeCourses: coursesWithProgress.filter(c => c.progress < 100).length,
+      hoursLearned: Math.round(
+        lessonProgress.reduce((acc, p) => acc + p.timeSpent / 3600, 0)
+      ),
+      certificateCount: certificates.length,
+      averageProgress: Math.round(
+        coursesWithProgress.reduce((acc, c) => acc + c.progress, 0) /
+          (coursesWithProgress.length || 1)
+      ),
+      recentCourses: coursesWithProgress
+        .sort(
+          (a, b) =>
+            new Date(b.lastAccessedAt).getTime() -
+            new Date(a.lastAccessedAt).getTime()
+        )
+        .slice(0, 3),
+      allCourses: coursesWithProgress,
+      progress: dailyProgress,
+      certificates: certificates.map(cert => ({
+        id: cert.id,
+        courseTitle: cert.course.title,
+        issueDate: cert.issueDate.toISOString(),
+        credential: cert.credentialId,
+      })),
     };
 
     res.json(dashboardData);
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    console.error('Error fetching student dashboard:', error);
+    res.status(500).json({ error: 'Failed to fetch student dashboard' });
   }
 });
 
