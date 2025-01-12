@@ -22,6 +22,7 @@ model User {
   password      String
   name          String
   role          Role       @default(STUDENT)
+  status        String     @default("ACTIVE")
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -43,6 +44,7 @@ model Course {
   category    String       @default("other")
   level       String       @default("beginner")
   duration    Int         @default(0)
+  status      String       @default("DRAFT")
   imageUrl    String?
   instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
   instructorId String
