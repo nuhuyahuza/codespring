@@ -12,6 +12,7 @@ import { Calendar } from './calendar';
 import { Textarea } from './textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { Alert, AlertTitle, AlertDescription } from './alert';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './sheet';
 
 export {
   Button,
@@ -58,4 +59,9 @@ export {
   Alert,
   AlertTitle,
   AlertDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 }; 

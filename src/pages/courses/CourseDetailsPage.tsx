@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Users, Clock, BookOpen, CheckCircle, Play, Award } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/features/auth';
 import axios from 'axios';
 import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
 import { PaymentModal } from '@/components/payment/PaymentModal';
+import { toast } from 'sonner';
 
 interface Course {
   id: string;
@@ -78,12 +79,12 @@ const SAMPLE_COURSE: Course = {
 
 export function CourseDetailsPage() {
   const { courseId } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, addToCart } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -106,15 +107,28 @@ export function CourseDetailsPage() {
   }, [courseId]);
 
   const handleEnrollClick = () => {
-    if (!user) {
+    if (!isAuthenticated) {
       navigate('/login', { state: { from: `/courses/${courseId}` } });
-    } else {
-      setShowPaymentModal(true);
+      return;
     }
+
+    if (!user?.hasCompletedOnboarding) {
+      navigate('/onboarding');
+      return;
+    }
+
+    // Add to cart
+    addToCart({
+      id: courseId!,
+      title: course.title,
+      price: course.price
+    });
+    toast.success('Course added to cart!');
   };
 
   const handlePaymentComplete = () => {
-    // TODO: Update enrollment status
+    setShowPaymentModal(false);
+    toast.success('Successfully enrolled in the course!');
     navigate(`/courses/${courseId}/learn`);
   };
 
@@ -204,7 +218,7 @@ export function CourseDetailsPage() {
                       className="bg-green-600 hover:bg-green-700"
                       onClick={handleEnrollClick}
                     >
-                      {user ? 'Enroll Now' : 'Login to Enroll'}
+                      {isAuthenticated ? 'Add to Cart' : 'Login to Enroll'}
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground text-center">

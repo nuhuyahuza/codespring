@@ -73,7 +73,8 @@ router.post('/login', async (req, res) => {
         email: true,
         password: true,
         name: true,
-        role: true
+        role: true,
+        hasCompletedOnboarding: true
       }
     });
 
@@ -89,7 +90,12 @@ router.post('/login', async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { 
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        hasCompletedOnboarding: user.hasCompletedOnboarding 
+      },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
@@ -97,10 +103,7 @@ router.post('/login', async (req, res) => {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
-    res.json({ 
-      token, 
-      user: userWithoutPassword
-    });
+    res.json({ token, user: userWithoutPassword });
   } catch (error) {
     console.error('Login error:', error);
     if (error instanceof Error) {
@@ -157,6 +160,35 @@ router.post('/onboarding', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Onboarding error:', error);
     res.status(500).json({ message: 'Failed to complete onboarding' });
+  }
+});
+
+// Add /me endpoint to get current user data
+router.get('/me', authenticateUser, async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        hasCompletedOnboarding: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user data' });
   }
 });
 

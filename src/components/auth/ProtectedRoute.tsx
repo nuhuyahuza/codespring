@@ -1,29 +1,42 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+  requiredRole?: string;
+  requireOnboarding?: boolean;
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+export function ProtectedRoute({ 
+  children, 
+  requiredRole,
+  requireOnboarding = true 
+}: ProtectedRouteProps) {
+  const { user, isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin">⌛</div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
-  if (!user) {
+  // Not authenticated - redirect to login
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  // Check role if required
+  if (requiredRole && user?.role !== requiredRole) {
     return <Navigate to="/unauthorized" replace />;
+  }
+
+  // Handle onboarding redirection - only if requireOnboarding is true and user hasn't completed it
+  if (requireOnboarding && user && !user.hasCompletedOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // For students who have completed onboarding but haven't enrolled in any courses
+  if (user?.role === 'STUDENT' && user?.hasCompletedOnboarding && location.pathname === '/dashboard') {
+    return <Navigate to="/courses" replace />;
   }
 
   return <>{children}</>;

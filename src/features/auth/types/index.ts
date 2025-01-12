@@ -1,5 +1,11 @@
 export type Role = 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
 
+export interface CartItem {
+  id: string;
+  title: string;
+  price: number;
+}
+
 export interface User {
   id: string;
   email: string;
