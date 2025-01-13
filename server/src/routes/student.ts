@@ -34,22 +34,11 @@ type DailyProgress = {
 // Get student dashboard data
 router.get('/', authenticateUser, async (req, res) => {
   console.log('\n=== STUDENT DASHBOARD REQUEST ===');
-  console.log('Authenticated User:', req.user);
+  console.log('Authenticated User:', JSON.stringify(req.user, null, 2));
   
   try {
     const userId = req.user!.id;
     console.log('\n📊 Fetching dashboard for user:', userId);
-
-    // First check if user has any enrollments
-    const enrollmentCount = await prisma.enrollment.count({
-      where: {
-        userId,
-        status: 'active',
-      }
-    });
-
-    console.log('\n📚 Enrollment Check:');
-    console.log('- Total enrollments found:', enrollmentCount);
 
     // Get enrolled courses with progress
     const enrollments = await prisma.enrollment.findMany({
@@ -58,25 +47,21 @@ router.get('/', authenticateUser, async (req, res) => {
         status: 'active',
       },
       include: {
-        course: {
+        Course: {
           include: {
-            instructor: {
-              select: {
-                name: true,
-              },
-            },
-            lessons: {
+            User: true, // This gets the instructor details
+            Lesson: {
               include: {
-                progress: {
+                LessonProgress: {
                   where: {
                     userId,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     console.log('\n📝 Raw Query Results:');
@@ -85,14 +70,14 @@ router.get('/', authenticateUser, async (req, res) => {
 
     // Transform to match client expected format
     const enrolledCourses = enrollments.map(enrollment => {
-      const totalLessons = enrollment.course.lessons.length;
-      const completedLessons = enrollment.course.lessons.filter(
-        lesson => lesson.progress[0]?.completed
+      const totalLessons = enrollment.Course.Lesson.length;
+      const completedLessons = enrollment.Course.Lesson.filter(
+        lesson => lesson.LessonProgress.some(progress => progress.completed)
       ).length;
 
       const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-      console.log(`\n📖 Processing course: ${enrollment.course.title}`);
+      console.log(`\n📖 Processing course: ${enrollment.Course.title}`);
       console.log({
         totalLessons,
         completedLessons,
@@ -100,12 +85,12 @@ router.get('/', authenticateUser, async (req, res) => {
       });
 
       return {
-        id: enrollment.course.id,
-        title: enrollment.course.title,
-        thumbnail: enrollment.course.imageUrl,
+        id: enrollment.Course.id,
+        title: enrollment.Course.title,
+        thumbnail: enrollment.Course.imageUrl,
         progress,
         instructor: {
-          name: enrollment.course.instructor.name,
+          name: enrollment.Course.User.name,
         },
       };
     });

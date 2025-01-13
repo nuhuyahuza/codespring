@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,180 +7,188 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  STUDENT
-  INSTRUCTOR
-  ADMIN
-}
-
-model CourseReview {
-  id        String   @id @default(uuid())
-  rating    Int      @db.Int
-  comment   String   @db.Text
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  course    Course   @relation(fields: [courseId], references: [id])
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
-}
-
-model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  password      String
-  name          String
-  role          Role       @default(STUDENT)
-  status        String     @default("ACTIVE")
-  avatar        String?
-  
-  // Onboarding fields
-  hasCompletedOnboarding Boolean    @default(false)
-  phoneNumber    String?
-  dateOfBirth    DateTime?
-  occupation     String?
-  educationLevel String?
-  preferredLanguage String?
-  interests      String?   @db.Text  // Stored as JSON string
-  
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  // Relations
-  courses       Course[]      @relation("InstructorCourses")
-  enrollments   Enrollment[]
-  submissions   Submission[]
-  groupMembers  GroupMember[]
-  messages      Message[]
-  lessonProgress LessonProgress[]
-  reviews       CourseReview[]
-  testimonials  Testimonial[]
-}
-
 model Course {
-  id          String       @id @default(uuid())
-  title       String
-  description String       @db.Text
-  price       Float
-  category    String       @default("other")
-  level       String       @default("beginner")
-  duration    Int         @default(0)
-  status      String       @default("DRAFT")
-  imageUrl    String?
-  instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
+  id           String         @id
+  title        String
+  description  String         @db.Text
+  price        Float
   instructorId String
-  enrollments Enrollment[]
-  groups      Group[]
-  lessons     Lesson[]
-  reviews     CourseReview[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  category     String         @default("other")
+  duration     Int            @default(0)
+  imageUrl     String?
+  level        String         @default("beginner")
+  status       String         @default("DRAFT")
+  User         User           @relation(fields: [instructorId], references: [id])
+  CourseReview CourseReview[]
+  Enrollment   Enrollment[]
+  Group        Group[]
+  Lesson       Lesson[]
 
   @@index([instructorId])
 }
 
-model Enrollment {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
+model CourseReview {
+  id        String   @id
+  rating    Int
+  comment   String   @db.Text
   userId    String
-  course    Course   @relation(fields: [courseId], references: [id])
   courseId  String
-  progress  Float    @default(0)
-  status    String   @default("pending")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  Course    Course   @relation(fields: [courseId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([userId])
 }
 
-model Lesson {
-  id          String       @id @default(uuid())
-  title       String
-  content     String       @db.Text
-  videoUrl    String?
-  order       Int
-  course      Course       @relation(fields: [courseId], references: [id])
-  courseId    String
-  submissions Submission[]
-  progress    LessonProgress[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
-model Submission {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  grade     Float?
-  feedback  String?  @db.Text
-  user      User     @relation(fields: [userId], references: [id])
+model Enrollment {
+  id        String   @id
   userId    String
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
-  lessonId  String
+  courseId  String
+  progress  Float    @default(0)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  status    String   @default("pending")
+  Course    Course   @relation(fields: [courseId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, courseId])
+  @@index([courseId], map: "Enrollment_courseId_fkey")
 }
 
 model Group {
-  id          String       @id @default(uuid())
+  id          String        @id
   name        String
-  description String       @db.Text
-  course      Course       @relation(fields: [courseId], references: [id])
+  description String        @db.Text
   courseId    String
-  members     GroupMember[]
-  messages    Message[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  Course      Course        @relation(fields: [courseId], references: [id])
+  GroupMember GroupMember[]
+  Message     Message[]
+
+  @@index([courseId], map: "Group_courseId_fkey")
 }
 
 model GroupMember {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  group     Group    @relation(fields: [groupId], references: [id])
-  groupId   String
+  id        String   @id
   role      String   @default("member")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  userId    String
+  groupId   String
+  Group     Group    @relation(fields: [groupId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, groupId])
+  @@index([groupId], map: "GroupMember_groupId_fkey")
 }
 
-model Message {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  group     Group    @relation(fields: [groupId], references: [id])
-  groupId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Lesson {
+  id             String           @id
+  title          String
+  content        String           @db.Text
+  videoUrl       String?
+  order          Int
+  courseId       String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  Course         Course           @relation(fields: [courseId], references: [id])
+  LessonProgress LessonProgress[]
+  Submission     Submission[]
+
+  @@index([courseId], map: "Lesson_courseId_fkey")
 }
 
 model LessonProgress {
-  id        String   @id @default(uuid())
+  id        String   @id
   completed Boolean  @default(false)
-  timeSpent Int     @default(0)
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  timeSpent Int      @default(0)
   lessonId  String
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  Lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, lessonId])
+  @@index([lessonId], map: "LessonProgress_lessonId_fkey")
+}
+
+model Message {
+  id        String   @id
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  userId    String
+  groupId   String
+  Group     Group    @relation(fields: [groupId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([groupId], map: "Message_groupId_fkey")
+  @@index([userId], map: "Message_userId_fkey")
+}
+
+model Submission {
+  id        String   @id
+  content   String   @db.Text
+  feedback  String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  userId    String
+  lessonId  String
+  grade     Float?
+  Lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([lessonId], map: "Submission_lessonId_fkey")
+  @@index([userId], map: "Submission_userId_fkey")
 }
 
 model Testimonial {
-  id        String   @id @default(uuid())
+  id        String   @id
   content   String   @db.Text
-  student   User     @relation(fields: [studentId], references: [id])
   studentId String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  User      User     @relation(fields: [studentId], references: [id])
 
   @@index([studentId])
-} 
+}
+
+model User {
+  id                     String           @id
+  email                  String           @unique
+  password               String
+  name                   String
+  role                   User_role        @default(STUDENT)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime
+  avatar                 String?
+  status                 String           @default("ACTIVE")
+  dateOfBirth            DateTime?
+  educationLevel         String?
+  hasCompletedOnboarding Boolean          @default(false)
+  interests              String?          @db.Text
+  occupation             String?
+  phoneNumber            String?
+  preferredLanguage      String?
+  Course                 Course[]
+  CourseReview           CourseReview[]
+  Enrollment             Enrollment[]
+  GroupMember            GroupMember[]
+  LessonProgress         LessonProgress[]
+  Message                Message[]
+  Submission             Submission[]
+  Testimonial            Testimonial[]
+}
+
+enum User_role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
