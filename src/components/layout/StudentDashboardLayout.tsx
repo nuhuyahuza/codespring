@@ -136,7 +136,7 @@ export function StudentDashboardLayout({ children }: { children: React.ReactNode
         </Button>
         {hasChildren && isExpanded && (
           <div className="ml-4 mt-1 space-y-1">
-            {item.children.map((child) => (
+            {item?.children?.map((child) => (
               <Button
                 key={child.href}
                 variant="ghost"

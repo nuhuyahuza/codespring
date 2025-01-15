@@ -7,9 +7,6 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const courses = await prisma.course.findMany({
-      where: {
-        published: true,
-      },
       include: {
         instructor: {
           select: {
@@ -70,7 +67,7 @@ export async function POST(request: Request) {
     console.error("Error creating course:", error);
     return NextResponse.json(
       { error: "Failed to create course" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 } 

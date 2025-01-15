@@ -16,124 +16,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Search, BookOpen } from "lucide-react";
 
 interface Course {
   id: string;
   title: string;
   thumbnail: string | null;
   progress: number;
-  instructor: string;
-  category?: string;
+  instructor: {
+    name: string;
+  };
   lastAccessedAt?: string;
 }
 
 interface EnrolledCoursesProps {
-  courses: Course[];
+  courses: Course[] | undefined;
   showProgress?: boolean;
   showFilters?: boolean;
 }
 
-export function EnrolledCourses({
-  courses,
-  showProgress = true,
-  showFilters = true,
-}: EnrolledCoursesProps) {
+export function EnrolledCourses({ courses = [], showProgress = true, showFilters = true }: EnrolledCoursesProps) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [filter, setFilter] = useState("all");
 
-  // Get unique categories
-  const categories = ["all", ...new Set(courses.map((course) => course.category))];
+  // Ensure courses is an array before mapping
+  const coursesToDisplay = Array.isArray(courses) ? courses : [];
 
-  // Filter courses
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch = course.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || course.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+  const filteredCourses = coursesToDisplay.filter((course) => {
+    if (filter === "in-progress") return course.progress < 100;
+    if (filter === "completed") return course.progress === 100;
+    return true;
   });
 
   return (
     <div className="space-y-6">
       {showFilters && (
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search courses..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Select
-            value={categoryFilter}
-            onValueChange={(value) => setCategoryFilter(value)}
-          >
+        <div className="flex justify-end">
+          <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder="Filter courses" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category?.charAt(0).toUpperCase() + category?.slice(1)}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All Courses</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredCourses.map((course) => (
           <Card key={course.id} className="overflow-hidden">
             {course.thumbnail && (
               <img
                 src={course.thumbnail}
                 alt={course.title}
-                className="aspect-video w-full object-cover"
+                className="w-full h-48 object-cover"
               />
             )}
             <CardHeader>
               <CardTitle className="line-clamp-2">{course.title}</CardTitle>
-              <CardDescription>{course.instructor}</CardDescription>
+              <CardDescription>by {course.instructor.name}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {showProgress && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{course.progress}%</span>
-                    </div>
-                    <Progress value={course.progress} />
-                  </div>
-                )}
-                <Button
-                  className="w-full"
-                  onClick={() => navigate(`/courses/${course.id}`)}
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Continue Learning
-                </Button>
-              </div>
+            <CardContent className="space-y-4">
+              {showProgress && (
+                <div className="space-y-2">
+                  <Progress value={course.progress} />
+                  <p className="text-sm text-muted-foreground">
+                    {course.progress}% complete
+                  </p>
+                </div>
+              )}
+              <Button
+                onClick={() => navigate(`/courses/${course.id}/learn`)}
+                className="w-full"
+              >
+                {course.progress === 0 ? "Start Course" : "Continue Learning"}
+              </Button>
             </CardContent>
           </Card>
         ))}
 
         {filteredCourses.length === 0 && (
-          <div className="col-span-full text-center py-12">
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No Courses Found</h3>
-            <p className="text-muted-foreground">
-              {searchQuery || categoryFilter !== "all"
-                ? "Try adjusting your filters"
-                : "You haven't enrolled in any courses yet"}
-            </p>
+          <div className="col-span-full text-center py-12 text-muted-foreground">
+            No courses found.
           </div>
         )}
       </div>

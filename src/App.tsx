@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { useAuth } from '@/features/auth';
 import { CartProvider } from '@/contexts/CartContext';
+import { wsClient } from '@/lib/websocket';
+import { useEffect } from 'react';
 
 // Import your pages
 import { LandingPage } from '@/pages/LandingPage';
@@ -16,10 +18,22 @@ import { InstructorsPage } from '@/pages/InstructorsPage';
 import { AboutPage } from '@/pages/AboutPage';
 import { StudentDashboardPage } from '@/pages/StudentDashboardPage';
 import { InstructorDashboardPage } from '@/pages/InstructorDashboardPage';
+import { LiveClassesPage } from '@/pages/student/LiveClassesPage';
+import { AssignmentsPage } from '@/pages/student/AssignmentsPage';
+import { CommunityPage } from '@/pages/student/CommunityPage';
+import { CertificatesPage } from '@/pages/student/CertificatesPage';
+import { StudentCoursesPage } from '@/pages/student/StudentCoursesPage';
+import { CourseLearnPage } from '@/pages/student/CourseLearnPage';
 
 function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (token) {
+      wsClient.connect(token);
+    }
+  }, [token]);
 
   return (
     <CartProvider>
@@ -70,6 +84,24 @@ function App() {
                 </Routes>
               </ProtectedRoute>
             }
+          />
+
+          {/* Student Dashboard Routes */}
+          <Route path="/dashboard/student" element={<StudentDashboardPage />} />
+          <Route path="/dashboard/student/courses" element={<StudentCoursesPage />} />
+          <Route path="/dashboard/student/live-classes" element={<LiveClassesPage />} />
+          <Route path="/dashboard/student/assignments" element={<AssignmentsPage />} />
+          <Route path="/dashboard/student/community" element={<CommunityPage />} />
+          <Route path="/dashboard/student/certificates" element={<CertificatesPage />} />
+          
+          {/* Course Learning Route */}
+          <Route 
+            path="/courses/:courseId/learn" 
+            element={
+              <ProtectedRoute>
+                <CourseLearnPage />
+              </ProtectedRoute>
+            } 
           />
 
           {/* Catch all route */}

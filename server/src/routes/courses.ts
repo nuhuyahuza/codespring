@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -8,13 +9,26 @@ const prisma = new PrismaClient();
 // Type definitions
 type CourseWithProgress = Prisma.CourseGetPayload<{
   include: {
-    instructor: true;
-    lessons: {
-      include: {
-        progress: true;
+    User: {
+      select: {
+        id: true;
+        name: true;
       };
     };
-    enrollments: true;
+    lessons: {
+      include: {
+        LessonProgress: {
+          where: {
+            userId: string;
+          };
+        };
+      };
+    };
+    Enrollment: {
+      where: {
+        userId: string;
+      };
+    };
   };
 }>;
 
@@ -27,28 +41,23 @@ router.get('/', async (req, res) => {
       take: featured === 'true' ? 3 : undefined,
       orderBy: [
         {
-          enrollments: {
-            _count: 'desc'
-          }
-        },
-        {
           createdAt: 'desc'
         }
       ],
       include: {
-        instructor: {
+        User: {
           select: {
             name: true,
           },
         },
         _count: {
           select: {
-            enrollments: true,
+            Enrollment: true,
           },
         },
       },
     });
-
+    
     res.json(courses);
   } catch (error) {
     console.error('Error fetching courses:', error);
@@ -63,13 +72,13 @@ router.get('/:id', async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        instructor: {
+        User: {
           select: {
             id: true,
             name: true,
           },
         },
-        lessons: {
+        Lesson: {
           orderBy: {
             order: 'asc',
           },
@@ -81,8 +90,8 @@ router.get('/:id', async (req, res) => {
         },
         _count: {
           select: {
-            enrollments: true,
-            lessons: true,
+            Enrollment: true,
+            Lesson: true,
           },
         },
       },
@@ -95,12 +104,12 @@ router.get('/:id', async (req, res) => {
     // Format response with preview data
     res.json({
       ...course,
-      lessonPreviews: course.lessons.map(l => l.title),
+      lessonPreviews: course.Lesson.map(l => l.title),
       _count: {
         ...course._count,
-        enrolled: course._count.enrollments,
+        enrolled: course._count.Enrollment,
       },
-      lessons: undefined, // Don't expose full lesson data
+      Lesson: undefined, // Don't expose full lesson data
     });
   } catch (error) {
     console.error('Error fetching course:', error);
@@ -114,10 +123,19 @@ router.post('/', authenticateUser, async (req, res) => {
     const { title, description, price } = req.body;
     const course = await prisma.course.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         description,
-        price,
+        price: parseFloat(price),
         instructorId: req.user!.id,
+        updatedAt: new Date(),
+      },
+      include: {
+        User: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
     res.status(201).json(course);
@@ -198,25 +216,25 @@ router.get('/:id/content', async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        instructor: {
+        User: {
           select: {
             id: true,
             name: true,
           },
         },
-        lessons: {
+        Lesson: {
           orderBy: {
             order: 'asc',
           },
           include: {
-            progress: userId ? {
+            LessonProgress: userId ? {
               where: {
                 userId,
               },
             } : false,
           },
         },
-        enrollments: userId ? {
+        Enrollment: userId ? {
           where: {
             userId,
           },
@@ -228,28 +246,26 @@ router.get('/:id/content', async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Check if user is enrolled or is instructor (if user is logged in)
-    const isEnrolled = userId ? course.enrollments?.length > 0 : false;
-    const isInstructor = userId ? course.instructor.id === userId : false;
+    const isEnrolled = userId ? course.Enrollment?.length > 0 : false;
+    const isInstructor = userId ? course.User.id === userId : false;
 
-    // Format lessons based on enrollment status
-    const formattedLessons = course.lessons.map((lesson, index) => ({
+    const formattedLessons = course.Lesson.map((lesson, index) => ({
       id: lesson.id,
       title: lesson.title,
       order: lesson.order,
-      isPreview: index < 3, // First 3 lessons are preview
+      isPreview: index < 3,
       ...(isEnrolled || isInstructor ? {
         content: lesson.content,
         videoUrl: lesson.videoUrl,
-        completed: lesson.progress?.[0]?.completed ?? false,
-        timeSpent: lesson.progress?.[0]?.timeSpent ?? 0,
+        completed: lesson.LessonProgress?.[0]?.completed ?? false,
+        timeSpent: lesson.LessonProgress?.[0]?.timeSpent ?? 0,
       } : {}),
     }));
 
     res.json({
       id: course.id,
       title: course.title,
-      instructor: course.instructor,
+      instructor: course.User.id,
       lessons: formattedLessons,
       isEnrolled,
     });
@@ -267,16 +283,16 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        lessons: {
+        Lesson: {
           include: {
-            progress: {
+            LessonProgress: {
               where: {
                 userId: req.user!.id,
               },
             },
           },
         },
-        enrollments: {
+        Enrollment: {
           where: {
             userId: req.user!.id,
           },
@@ -288,22 +304,20 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Check enrollment
-    if (!course.enrollments.length) {
+    if (!course.Enrollment.length) {
       return res.status(403).json({ error: 'Not enrolled in this course' });
     }
 
-    // Calculate progress
-    const completedLessons = course.lessons
-      .filter(lesson => lesson.progress.length > 0 && lesson.progress[0].completed)
+    const completedLessons = course.Lesson
+      .filter(lesson => lesson.LessonProgress.length > 0 && lesson.LessonProgress[0].completed)
       .map(lesson => lesson.id);
 
-    const totalProgress = course.lessons.length > 0
-      ? completedLessons.length / course.lessons.length
+    const totalProgress = course.Lesson.length > 0
+      ? completedLessons.length / course.Lesson.length
       : 0;
 
-    const totalTimeSpent = course.lessons.reduce(
-      (total, lesson) => total + (lesson.progress[0]?.timeSpent || 0),
+    const totalTimeSpent = course.Lesson.reduce(
+      (total, lesson) => total + (lesson.LessonProgress[0]?.timeSpent || 0),
       0
     );
 
@@ -311,7 +325,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       completedLessons,
       totalProgress,
       totalTimeSpent,
-      currentLesson: course.lessons.find(lesson => !lesson.progress[0]?.completed)?.id || null,
+      currentLesson: course.Lesson.find(lesson => !lesson.LessonProgress[0]?.completed)?.id || null,
     });
   } catch (error) {
     console.error('Error fetching course progress:', error);
@@ -329,8 +343,8 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        lessons: true,
-        enrollments: {
+        Lesson: true,
+        Enrollment: {
           where: {
             userId,
           },
@@ -343,44 +357,32 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
     }
 
     // Check if already enrolled
-    if (course.enrollments.length > 0) {
+    if (course.Enrollment.length > 0) {
       return res.status(400).json({ error: 'Already enrolled in this course' });
     }
 
     // Create enrollment
     const enrollment = await prisma.enrollment.create({
       data: {
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
-        course: {
-          connect: {
-            id,
-          },
-        },
-      },
+        id: crypto.randomUUID(),
+        userId,
+        courseId: id,
+        updatedAt: new Date()
+      }
     });
 
     // Create initial progress records for all lessons
     await prisma.$transaction(
-      course.lessons.map(lesson => 
+      course.Lesson.map(lesson => 
         prisma.lessonProgress.create({
           data: {
-            lesson: {
-              connect: {
-                id: lesson.id,
-              },
-            },
-            user: {
-              connect: {
-                id: userId,
-              },
-            },
+            id: crypto.randomUUID(),
+            lessonId: lesson.id,
+            userId,
             completed: false,
             timeSpent: 0,
-          },
+            updatedAt: new Date()
+          }
         })
       )
     );
@@ -402,23 +404,18 @@ router.get('/featured', async (req, res) => {
       },
       orderBy: [
         {
-          enrollments: {
-            _count: 'desc'
-          }
-        },
-        {
           createdAt: 'desc'
         }
       ],
       include: {
-        instructor: {
+        User: {
           select: {
             name: true,
           },
         },
         _count: {
           select: {
-            enrollments: true,
+            Enrollment: true,
           },
         },
       },
@@ -430,8 +427,8 @@ router.get('/featured', async (req, res) => {
       description: course.description,
       price: course.price,
       thumbnail: course.imageUrl || '/course-placeholder.jpg',
-      instructor: course.instructor.name,
-      enrollments: course._count.enrollments,
+      instructor: course.User.name,
+      enrolled: course._count.Enrollment,
     }));
 
     res.json(formattedCourses);

@@ -5,31 +5,36 @@ import { AuthContext } from './AuthContext';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
+      const storedToken = sessionStorage.getItem('token');
+      if (storedToken) {
         try {
-          const decoded = jwtDecode<{ userId: string; email: string; role: string }>(token);
+          const decoded = jwtDecode<{ userId: string; email: string; role: string }>(storedToken);
+          setToken(storedToken);
+          
           // Fetch user data from API
           const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
             headers: {
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${storedToken}`
             }
           });
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
           } else {
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            setToken(null);
           }
         } catch (err) {
           console.error('Token validation error:', err);
-          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          setToken(null);
         }
       }
       setIsLoading(false);
@@ -52,51 +57,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(errorData.message || 'Invalid credentials');
       }
 
-      const { token, user: userData } = await response.json();
-      localStorage.setItem('token', token);
+      const { token: newToken, user: userData } = await response.json();
+      
+      // Store token in both state and sessionStorage
+      sessionStorage.setItem('token', newToken);
+      setToken(newToken);
       setUser(userData);
+      
+      console.log('Login successful:', { token: newToken?.slice(0, 10) + '...', user: userData });
     } catch (err) {
+      console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    setToken(null);
     setUser(null);
     setCart([]);
   };
 
-  const addToCart = (item: CartItem) => {
-    setCart(prev => {
-      if (!prev.some(i => i.id === item.id)) {
-        return [...prev, item];
-      }
-      return prev;
-    });
-  };
-
-  const removeFromCart = (itemId: string) => {
-    setCart(prev => prev.filter(item => item.id !== itemId));
-  };
-
-  const clearCart = () => {
-    setCart([]);
-  };
-
   return (
-    <AuthContext.Provider value={{
-      user,
-      cart,
-      login,
-      logout,
-      isLoading,
-      error,
-      addToCart,
-      removeFromCart,
-      clearCart,
-      isAuthenticated: !!user
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated: !!user,
+        isLoading,
+        error,
+        login,
+        logout,
+        cart,
+        addToCart: (item: CartItem) => setCart(prev => [...prev, item]),
+        removeFromCart: (itemId: string) => 
+          setCart(prev => prev.filter(item => item.id !== itemId)),
+        clearCart: () => setCart([]),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

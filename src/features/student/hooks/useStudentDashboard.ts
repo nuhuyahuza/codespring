@@ -1,62 +1,101 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAuth } from "@/features/auth";
-
-interface Course {
-  id: string;
-  title: string;
-  instructor: string;
-  thumbnail: string | null;
-  progress: number;
-  lastAccessedAt: string;
-}
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth';
 
 interface DashboardData {
-  enrolledCourses: number;
-  activeCourses: number;
-  hoursLearned: number;
-  averageProgress: number;
-  recentCourses: Course[];
-  allCourses: Course[];
+  enrolledCourses: Array<{
+    id: string;
+    title: string;
+    thumbnail: string | null;
+    progress: number;
+    instructor: {
+      name: string;
+    };
+  }>;
+  stats: {
+    totalCourses: number;
+    completedCourses: number;
+    inProgressCourses: number;
+  };
 }
-
-const MOCK_DASHBOARD_DATA: DashboardData = {
-  enrolledCourses: 3,
-  activeCourses: 2,
-  hoursLearned: 25,
-  averageProgress: 75,
-  recentCourses: [
-    {
-      id: '1',
-      title: 'Advanced JavaScript Development',
-      instructor: 'John Doe',
-      thumbnail: '/placeholder-course.jpg',
-      progress: 75,
-      lastAccessedAt: new Date().toISOString(),
-    },
-    // Add more mock courses as needed
-  ],
-  allCourses: [
-    // Same as recentCourses for now
-  ]
-};
 
 export function useStudentDashboard() {
   const { token } = useAuth();
 
-  return useQuery({
+  return useQuery<DashboardData>({
     queryKey: ['studentDashboard'],
     queryFn: async () => {
-      if (import.meta.env.DEV) {
-        // Return mock data in development
-        return MOCK_DASHBOARD_DATA;
+      console.log('Starting to fetch student dashboard...');
+      
+      if (!token) {
+        console.error('No auth token available');
+        throw new Error('Authentication token is required');
       }
-      const response = await api.get('/student/dashboard', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data;
+
+      try {
+        console.log('Making request with token:', token.slice(0, 10) + '...');
+        
+        const response = await fetch('http://localhost:5000/api/student', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Dashboard API Error:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
+          throw new Error(`Failed to fetch dashboard: ${response.status} ${errorText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('application/json')) {
+          console.error('Unexpected content type:', contentType);
+          throw new Error('Server did not return JSON');
+        }
+
+        const data = await response.json();
+        console.log('Raw API Response:', data);
+        
+        // Validate the response structure
+        if (!data || typeof data !== 'object') {
+          console.error('Invalid response format:', data);
+          throw new Error('Invalid response format');
+        }
+
+        if (!Array.isArray(data.enrolledCourses)) {
+          console.error('enrolledCourses is not an array:', data.enrolledCourses);
+          throw new Error('Invalid enrolledCourses format');
+        }
+
+        // Log each course for debugging
+        data.enrolledCourses.forEach((course: { 
+          id: string;
+          title: string;
+          progress: number;
+          instructor: { name: string; }
+        }, index:number) => {
+          console.log(`Course ${index + 1}:`, {
+            id: course.id,
+            title: course.title,
+            progress: course.progress,
+            instructor: course.instructor?.name
+          });
+        });
+
+        return data;
+      } catch (error) {
+        console.error('Dashboard fetch error:', error);
+        throw error;
+      }
     },
-    retry: false,
-    refetchOnWindowFocus: false,
+    enabled: !!token,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 2,
   });
 } 

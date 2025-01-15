@@ -29,11 +29,47 @@ export interface Group {
 export interface Course {
   id: string;
   title: string;
+  instructor: string;
+  thumbnail: string | null;
+  progress: number;
+  status: 'in-progress' | 'completed';
+  lastAccessedAt: string;
+}
+
+export interface LiveClass {
+  id: string;
+  courseId: string;
+  courseName: string;
+  instructorName: string;
+  startTime: string;
+  duration: number;
+  meetingLink: string;
+  description?: string;
+}
+
+export interface Assignment {
+  id: string;
+  courseId: string;
+  courseName: string;
+  title: string;
   description: string;
-  price: number;
-  instructor: User;
-  enrolledStudents: User[];
-  groups: Group[];
-  createdAt: string;
-  updatedAt: string;
+  dueDate: string;
+  status: 'pending' | 'submitted' | 'graded';
+  grade?: number;
+  feedback?: string;
+  submissionUrl?: string;
+}
+
+export interface CommunityGroup {
+  id: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  category: string;
+  isJoined: boolean;
+  recentActivity?: {
+    type: 'post' | 'question' | 'discussion';
+    title: string;
+    timestamp: string;
+  }[];
 } 
