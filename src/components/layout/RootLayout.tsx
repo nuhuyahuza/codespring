@@ -20,8 +20,10 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
     navigate('/login', { replace: true });
   };
 
-  // Don't show header on auth pages
+  // Don't show header on auth pages or student pages
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+  const isStudentPage = location.pathname.includes('/student');
+  const isInstructor  = location.pathname === '/instructors';
   const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {!isAuthPage && (showNav || !isLandingPage) && (
+      {!isAuthPage && !isStudentPage && (showNav || !isLandingPage) && (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-14 items-center justify-between">
             <Link to="/" className="flex items-center space-x-2">
@@ -159,7 +161,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      {!isAuthPage && <MainFooter />}
+      {!isAuthPage && !isStudentPage && <MainFooter />}
     </div>
   );
 } 

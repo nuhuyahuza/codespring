@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Lock, CheckCircle, PlayCircle } from 'lucide-react';
+import { 
+  Loader2, Lock, CheckCircle, PlayCircle, X, Menu, ChevronLeft,
+  Home, BookOpen, Users, Award, Settings, LogOut
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Course {
@@ -46,6 +49,9 @@ export function CourseLearnPage() {
   const queryClient = useQueryClient();
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const fetchCourse = useCallback(async () => {
     if (!courseId || !token) throw new Error('Missing courseId or token');
@@ -137,32 +143,70 @@ export function CourseLearnPage() {
     .every((lesson) => lesson.LessonProgress?.[0]?.completed) ?? false;
 
   const handleLessonComplete = async () => {
-    if (!currentLessonId) return;
+    if (!currentLessonId || !course) return;
+    
     try {
       await progressMutation.mutateAsync({
         lessonId: currentLessonId,
         completed: true,
-        timeSpent: 0, // You might want to track actual time spent
+        timeSpent: 0,
       });
+
+      // Automatically move to next lesson after completion
+      const currentIndex = course.Lesson.findIndex(l => l.id === currentLessonId);
+      if (currentIndex < course.Lesson.length - 1) {
+        setCurrentLessonId(course.Lesson[currentIndex + 1].id);
+      }
     } catch (error) {
-      // Error is handled by the mutation's onError callback
+      // Error handled by mutation
     }
   };
 
   const handleLessonSelect = (lessonId: string, index: number) => {
     if (!course?.Lesson) return;
     
+    // Allow selecting completed lessons or the next available lesson
+    const isCompleted = course.Lesson[index].LessonProgress?.[0]?.completed;
     const previousLessonsCompleted = course.Lesson
       .slice(0, index)
-      .every((lesson) => lesson.LessonProgress?.[0]?.completed);
+      .every(lesson => lesson.LessonProgress?.[0]?.completed);
 
-    if (!previousLessonsCompleted) {
+    if (!isCompleted && !previousLessonsCompleted) {
       toast.error('Please complete previous lessons first');
       return;
     }
 
     setCurrentLessonId(lessonId);
+    setIsSidebarOpen(false); // Close sidebar on mobile
   };
+
+  // Update the lesson navigation buttons
+  const handlePreviousLesson = () => {
+    if (!course || currentLessonIndex <= 0) return;
+    setCurrentLessonId(course.Lesson[currentLessonIndex - 1].id);
+  };
+
+  const handleNextLesson = () => {
+    if (!course || currentLessonIndex >= course.Lesson.length - 1) return;
+    setCurrentLessonId(course.Lesson[currentLessonIndex + 1].id);
+  };
+
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        setIsSidebarOpen(false);
+      }
+    }
+
+    if (isSidebarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSidebarOpen]);
 
   if (isLoading) {
     return (
@@ -199,124 +243,230 @@ export function CourseLearnPage() {
   const progressPercentage = Math.round((completedLessons / totalLessons) * 100);
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <div className="w-80 border-r bg-muted/10 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">{course.title}</h2>
-        <div className="mb-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span>Course Progress</span>
-            <span>{progressPercentage}%</span>
-          </div>
-          <Progress value={progressPercentage} className="h-2" />
-        </div>
-        <div className="space-y-2">
-          {course.Lesson.map((lesson, index) => {
-            const isCompleted = lesson.LessonProgress?.[0]?.completed;
-            const isCurrent = lesson.id === currentLessonId;
-            const isLocked = !course.Lesson
-              .slice(0, index)
-              .every((l) => l.LessonProgress?.[0]?.completed);
-
-            return (
-              <button
-                key={lesson.id}
-                onClick={() => handleLessonSelect(lesson.id, index)}
-                disabled={isLocked && !isCompleted}
-                className={`w-full p-3 rounded-lg text-left flex items-center gap-3 transition-colors ${
-                  isCurrent
-                    ? 'bg-primary text-primary-foreground'
-                    : isCompleted
-                    ? 'bg-muted/50 hover:bg-muted'
-                    : isLocked
-                    ? 'bg-muted/30 cursor-not-allowed opacity-50'
-                    : 'hover:bg-muted/50'
-                }`}
-              >
-                <div className="flex-shrink-0">
-                  {isCompleted ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : isLocked ? (
-                    <Lock className="h-5 w-5" />
-                  ) : (
-                    <PlayCircle className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{lesson.title}</div>
-                  <div className="text-xs opacity-70">Lesson {index + 1}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto">
-        {currentLesson && (
-          <div className="p-6 max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold mb-2">{currentLesson.title}</h3>
-              <p className="text-muted-foreground">
-                Lesson {currentLessonIndex + 1} of {totalLessons}
-              </p>
+    <div className="min-h-screen bg-background">
+      {/* Student Dashboard Layout */}
+      <div className="flex h-screen overflow-hidden">
+        {/* Main Sidebar - Always visible */}
+        <div className="hidden md:flex w-20 flex-col fixed inset-y-0 z-50 bg-muted/50 border-r">
+          <div className="flex-1 flex flex-col items-center gap-4 p-4">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+              CS
             </div>
-
-            {currentLesson.videoUrl && (
-              <div className="mb-6">
-                <VideoPlayer
-                  url={currentLesson.videoUrl}
-                  isFullscreen={isFullscreen}
-                  onFullscreenChange={setIsFullscreen}
-                />
-              </div>
-            )}
-
-            <div className="prose dark:prose-invert max-w-none mb-6">
-              {currentLesson.content}
-            </div>
-
-            <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                disabled={currentLessonIndex === 0}
-                onClick={() => {
-                  const prevLesson = course.Lesson[currentLessonIndex - 1];
-                  if (prevLesson) setCurrentLessonId(prevLesson.id);
-                }}
-              >
-                Previous Lesson
+            <nav className="flex-1 flex flex-col items-center gap-4 pt-8">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+                <Home className="h-5 w-5" />
               </Button>
-
-              {currentLesson.LessonProgress?.[0]?.completed ? (
-                <Button
-                  disabled={currentLessonIndex === course.Lesson.length - 1}
-                  onClick={() => {
-                    const nextLesson = course.Lesson[currentLessonIndex + 1];
-                    if (nextLesson) setCurrentLessonId(nextLesson.id);
-                  }}
-                >
-                  Next Lesson
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleLessonComplete}
-                  disabled={!previousLessonsCompleted || progressMutation.isPending}
-                >
-                  {progressMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Complete Lesson'
-                  )}
-                </Button>
-              )}
+              <Button variant="ghost" size="icon" onClick={() => navigate('/courses')}>
+                <BookOpen className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/community')}>
+                <Users className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/certificates')}>
+                <Award className="h-5 w-5" />
+              </Button>
+            </nav>
+            <div className="mt-auto flex flex-col gap-4">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 md:ml-20">
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/courses')}
+                className="mr-2"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg font-semibold truncate">{course.title}</h1>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Course Content Layout */}
+          <div className="flex h-[calc(100vh-4rem)] md:h-screen">
+            {/* Course Sidebar */}
+            <>
+              {isSidebarOpen && (
+                <div 
+                  className="fixed inset-0 bg-black/20 z-40 md:hidden"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+              )}
+              
+              <div
+                ref={sidebarRef}
+                className={`
+                  fixed md:sticky top-0 h-full z-50 w-full md:w-80
+                  transform transition-transform duration-200 ease-in-out
+                  bg-background border-r overflow-y-auto
+                  ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                `}
+              >
+                <div className="p-6">
+                  {/* Mobile Close Button */}
+                  <div className="flex justify-between items-center md:hidden mb-4">
+                    <h2 className="text-xl font-bold">Course Content</h2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="hover:bg-muted"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+
+                  {/* Desktop Title */}
+                  <h2 className="text-2xl font-bold mb-4 hidden md:block">{course.title}</h2>
+                  
+                  {/* Rest of sidebar content */}
+                  <div className="mb-6">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Course Progress</span>
+                      <span>{progressPercentage}%</span>
+                    </div>
+                    <Progress value={progressPercentage} className="h-2" />
+                  </div>
+                  <div className="space-y-2">
+                    {course.Lesson.map((lesson, index) => {
+                      const isCompleted = lesson.LessonProgress?.[0]?.completed;
+                      const isCurrent = lesson.id === currentLessonId;
+                      const isLocked = !course.Lesson
+                        .slice(0, index)
+                        .every((l) => l.LessonProgress?.[0]?.completed);
+
+                      return (
+                        <button
+                          key={lesson.id}
+                          onClick={() => {
+                            handleLessonSelect(lesson.id, index);
+                            setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                          }}
+                          disabled={isLocked && !isCompleted}
+                          className={`w-full p-3 rounded-lg text-left flex items-center gap-3 transition-colors ${
+                            isCurrent
+                              ? 'bg-primary text-primary-foreground'
+                              : isCompleted
+                              ? 'bg-muted/50 hover:bg-muted'
+                              : isLocked
+                              ? 'bg-muted/30 cursor-not-allowed opacity-50'
+                              : 'hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex-shrink-0">
+                            {isCompleted ? (
+                              <CheckCircle className="h-5 w-5" />
+                            ) : isLocked ? (
+                              <Lock className="h-5 w-5" />
+                            ) : (
+                              <PlayCircle className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{lesson.title}</div>
+                            <div className="text-xs opacity-70">Lesson {index + 1}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="container max-w-4xl mx-auto px-4 py-6">
+                {currentLesson && (
+                  <div className="p-4 md:p-6 max-w-4xl mx-auto">
+                    <div className="mb-4 md:mb-6">
+                      <h3 className="text-xl md:text-2xl font-bold mb-2">{currentLesson.title}</h3>
+                      <p className="text-muted-foreground">
+                        Lesson {currentLessonIndex + 1} of {totalLessons}
+                      </p>
+                    </div>
+
+                    {currentLesson.videoUrl && (
+                      <div className="mb-4 md:mb-6">
+                        <div className="relative aspect-video">
+                          <VideoPlayer
+                            url={currentLesson.videoUrl}
+                            isFullscreen={isFullscreen}
+                            onFullscreenChange={setIsFullscreen}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="prose dark:prose-invert max-w-none mb-6 text-sm md:text-base">
+                      {currentLesson.content}
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center">
+                      <Button
+                        variant="outline"
+                        className="w-full md:w-auto"
+                        disabled={currentLessonIndex === 0}
+                        onClick={handlePreviousLesson}
+                      >
+                        Previous Lesson
+                      </Button>
+
+                      {currentLesson?.LessonProgress?.[0]?.completed ? (
+                        <Button
+                          className="w-full md:w-auto"
+                          disabled={currentLessonIndex === course.Lesson.length - 1}
+                          onClick={handleNextLesson}
+                        >
+                          Next Lesson
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full md:w-auto"
+                          onClick={handleLessonComplete}
+                          disabled={!previousLessonsCompleted || progressMutation.isPending}
+                        >
+                          {progressMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Complete Lesson'
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <footer className="mt-auto border-t py-4 px-6 text-center text-sm text-muted-foreground">
+                <p>© {new Date().getFullYear()} CodeSpring. All rights reserved.</p>
+              </footer>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
