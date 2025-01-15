@@ -88,7 +88,7 @@ export function EnrolledCourses({ courses = [], showProgress = true, showFilters
                 </div>
               )}
               <Button
-                onClick={() => navigate(`/courses/${course.id}/learn`)}
+                onClick={() => navigate(`/student/courses/${course.id}/learn`)}
                 className="w-full"
               >
                 {course.progress === 0 ? "Start Course" : "Continue Learning"}

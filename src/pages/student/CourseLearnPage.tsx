@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
@@ -8,26 +8,36 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Lock, CheckCircle, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Lesson {
-  id: string;
-  title: string;
-  content: string;
-  videoUrl: string | null;
-  order: number;
-  progress?: {
-    completed: boolean;
-    timeSpent: number;
-  }[];
-}
-
 interface Course {
   id: string;
   title: string;
   description: string;
-  instructor: {
+  price: number;
+  instructorId: string;
+  createdAt: string;
+  updatedAt: string;
+  category: string;
+  duration: number;
+  imageUrl: string | null;
+  level: string;
+  status: string;
+  User: {
     name: string;
   };
-  lessons: Lesson[];
+  Lesson: {
+    id: string;
+    title: string;
+    content: string;
+    videoUrl: string | null;
+    order: number;
+    courseId: string;
+    createdAt: string;
+    updatedAt: string;
+    LessonProgress: {
+      completed: boolean;
+      timeSpent: number;
+    }[];
+  }[];
 }
 
 export function CourseLearnPage() {
@@ -37,29 +47,48 @@ export function CourseLearnPage() {
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const fetchCourse = useCallback(async () => {
+    if (!courseId || !token) throw new Error('Missing courseId or token');
+    
+    const response = await fetch(
+      `http://localhost:5000/api/courses/${courseId}/learn`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch course');
+    }
+
+    return response.json();
+  }, [courseId, token]);
+
   const { data: course, isLoading, error } = useQuery<Course>({
     queryKey: ['course', courseId, 'learn'],
-    queryFn: async () => {
-      if (!courseId || !token) throw new Error('Missing courseId or token');
-      
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/courses/${courseId}/content`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch course');
-      }
-
-      return response.json();
-    },
-    enabled: !!courseId && !!token,
+    queryFn: fetchCourse,
+    enabled: Boolean(courseId && token),
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
+
+  // Set initial lesson only when course first loads
+  useEffect(() => {
+    if (course && course?.Lesson?.length > 0 && !currentLessonId) {
+      const firstIncomplete = course.Lesson.find(
+        (lesson) => !lesson.LessonProgress?.[0]?.completed
+      );
+      setCurrentLessonId(firstIncomplete?.id || course.Lesson[0].id);
+    }
+  }, [course]);
 
   const progressMutation = useMutation({
     mutationFn: async ({
@@ -74,7 +103,7 @@ export function CourseLearnPage() {
       if (!token) throw new Error('Not authenticated');
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/lessons/${lessonId}/progress`,
+        `http://localhost:5000/api/lessons/${lessonId}/progress`,
         {
           method: 'POST',
           headers: {
@@ -101,21 +130,11 @@ export function CourseLearnPage() {
     },
   });
 
-  // Set initial lesson
-  useEffect(() => {
-    if (course?.lessons && course.lessons.length > 0 && !currentLessonId) {
-      const firstIncompleteLesson = course.lessons.find(
-        lesson => !lesson.progress?.[0]?.completed
-      );
-      setCurrentLessonId(firstIncompleteLesson?.id || course.lessons[0].id);
-    }
-  }, [course, currentLessonId]);
-
-  const currentLesson = course?.lessons?.find(lesson => lesson.id === currentLessonId);
-  const currentLessonIndex = course?.lessons?.findIndex(lesson => lesson.id === currentLessonId) ?? -1;
-  const previousLessonsCompleted = course?.lessons
+  const currentLesson = course?.Lesson?.find((lesson) => lesson.id === currentLessonId);
+  const currentLessonIndex = course?.Lesson?.findIndex((lesson) => lesson.id === currentLessonId) ?? -1;
+  const previousLessonsCompleted = course?.Lesson
     ?.slice(0, currentLessonIndex)
-    .every(lesson => lesson.progress?.[0]?.completed) ?? false;
+    .every((lesson) => lesson.LessonProgress?.[0]?.completed) ?? false;
 
   const handleLessonComplete = async () => {
     if (!currentLessonId) return;
@@ -131,11 +150,11 @@ export function CourseLearnPage() {
   };
 
   const handleLessonSelect = (lessonId: string, index: number) => {
-    if (!course?.lessons) return;
+    if (!course?.Lesson) return;
     
-    const previousLessonsCompleted = course.lessons
+    const previousLessonsCompleted = course.Lesson
       .slice(0, index)
-      .every(lesson => lesson.progress?.[0]?.completed);
+      .every((lesson) => lesson.LessonProgress?.[0]?.completed);
 
     if (!previousLessonsCompleted) {
       toast.error('Please complete previous lessons first');
@@ -175,8 +194,8 @@ export function CourseLearnPage() {
     );
   }
 
-  const totalLessons = course.lessons.length;
-  const completedLessons = course.lessons.filter(lesson => lesson.progress?.[0]?.completed).length;
+  const totalLessons = course.Lesson.length;
+  const completedLessons = course.Lesson.filter((lesson) => lesson.LessonProgress?.[0]?.completed).length;
   const progressPercentage = Math.round((completedLessons / totalLessons) * 100);
 
   return (
@@ -192,12 +211,12 @@ export function CourseLearnPage() {
           <Progress value={progressPercentage} className="h-2" />
         </div>
         <div className="space-y-2">
-          {course.lessons.map((lesson, index) => {
-            const isCompleted = lesson.progress?.[0]?.completed;
+          {course.Lesson.map((lesson, index) => {
+            const isCompleted = lesson.LessonProgress?.[0]?.completed;
             const isCurrent = lesson.id === currentLessonId;
-            const isLocked = !course.lessons
+            const isLocked = !course.Lesson
               .slice(0, index)
-              .every(l => l.progress?.[0]?.completed);
+              .every((l) => l.LessonProgress?.[0]?.completed);
 
             return (
               <button
@@ -263,18 +282,18 @@ export function CourseLearnPage() {
                 variant="outline"
                 disabled={currentLessonIndex === 0}
                 onClick={() => {
-                  const prevLesson = course.lessons[currentLessonIndex - 1];
+                  const prevLesson = course.Lesson[currentLessonIndex - 1];
                   if (prevLesson) setCurrentLessonId(prevLesson.id);
                 }}
               >
                 Previous Lesson
               </Button>
 
-              {currentLesson.progress?.[0]?.completed ? (
+              {currentLesson.LessonProgress?.[0]?.completed ? (
                 <Button
-                  disabled={currentLessonIndex === course.lessons.length - 1}
+                  disabled={currentLessonIndex === course.Lesson.length - 1}
                   onClick={() => {
-                    const nextLesson = course.lessons[currentLessonIndex + 1];
+                    const nextLesson = course.Lesson[currentLessonIndex + 1];
                     if (nextLesson) setCurrentLessonId(nextLesson.id);
                   }}
                 >
@@ -301,4 +320,4 @@ export function CourseLearnPage() {
       </div>
     </div>
   );
-} 
+}

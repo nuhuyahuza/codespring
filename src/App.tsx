@@ -96,11 +96,9 @@ function App() {
           
           {/* Course Learning Route */}
           <Route 
-            path="/courses/:courseId/learn" 
+            path="/student/courses/:courseId/learn" 
             element={
-              <ProtectedRoute>
                 <CourseLearnPage />
-              </ProtectedRoute>
             } 
           />
 

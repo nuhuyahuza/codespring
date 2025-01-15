@@ -438,4 +438,64 @@ router.get('/featured', async (req, res) => {
   }
 });
 
+// Get course content for learning
+router.get('/:id/learn', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const course = await prisma.course.findUnique({
+      where: { 
+        id,
+      },
+      include: {
+        User: {
+          select: {
+            name: true,
+          },
+        },
+        Lesson: {
+          orderBy: {
+            order: 'asc',
+          },
+          include: {
+            LessonProgress: {
+              where: {
+                userId,
+              },
+              select: {
+                completed: true,
+                timeSpent: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Check if user is enrolled
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId: id,
+        },
+      },
+    });
+
+    if (!enrollment) {
+      return res.status(403).json({ error: 'Not enrolled in this course' });
+    }
+
+    res.json(course);
+  } catch (error) {
+    console.error('Error fetching course content:', error);
+    res.status(500).json({ error: 'Failed to fetch course content' });
+  }
+});
+
 export default router; 
