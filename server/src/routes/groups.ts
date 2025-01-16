@@ -5,26 +5,32 @@ import { authenticateUser } from '../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get all groups for a course
-router.get('/course/:courseId', authenticateUser, async (req, res) => {
+// Get enrolled groups
+router.get('/enrolled', authenticateUser, async (req, res) => {
   try {
-    const { courseId } = req.params;
-    const groups = await prisma.group.findMany({
-      where: { courseId },
-      include: {
+    const groups = await prisma.groupMember.findMany({
+      where: {
         members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+          some: {
+            userId: req.user!.id,
+          },
+        },
+      },
+      include: {
+        course: {
+          select: {
+            title: true,
+          },
+        },
+        _count: {
+          select: {
+            User: true,
+            messages: true,
           },
         },
       },
     });
+
     res.json(groups);
   } catch (error) {
     console.error('Error fetching groups:', error);
@@ -32,84 +38,93 @@ router.get('/course/:courseId', authenticateUser, async (req, res) => {
   }
 });
 
-// Create a group
+// Get group messages
+router.get('/:groupId/messages', authenticateUser, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const messages = await prisma.message.findMany({
+      where: {
+        groupId,
+      },
+      include: {
+        User: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Send message
+router.post('/:groupId/messages', authenticateUser, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { content } = req.body;
+    const userId = req.user!.id;
+
+    const message = await prisma.message.create({
+      data: {
+        content,
+        userId,
+        groupId,
+      },
+      include: {
+        User: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Create group
 router.post('/', authenticateUser, async (req, res) => {
   try {
-    const { name, description, courseId } = req.body;
+    const { name, description, category } = req.body;
+    const userId = req.user!.id;
+
     const group = await prisma.group.create({
       data: {
         name,
         description,
-        courseId,
+        category,
         members: {
           create: {
-            userId: req.user!.id,
-            role: 'owner',
+            userId,
+            role: 'ADMIN',
           },
         },
       },
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+        _count: {
+          select: {
+            members: true,
           },
         },
       },
     });
+
     res.status(201).json(group);
   } catch (error) {
     console.error('Error creating group:', error);
     res.status(500).json({ error: 'Failed to create group' });
-  }
-});
-
-// Join a group
-router.post('/:id/join', authenticateUser, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const member = await prisma.groupMember.create({
-      data: {
-        groupId: id,
-        userId: req.user!.id,
-        role: 'member',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-    res.status(201).json(member);
-  } catch (error) {
-    console.error('Error joining group:', error);
-    res.status(500).json({ error: 'Failed to join group' });
-  }
-});
-
-// Leave a group
-router.delete('/:id/leave', authenticateUser, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.groupMember.deleteMany({
-      where: {
-        groupId: id,
-        userId: req.user!.id,
-      },
-    });
-    res.status(204).end();
-  } catch (error) {
-    console.error('Error leaving group:', error);
-    res.status(500).json({ error: 'Failed to leave group' });
   }
 });
 

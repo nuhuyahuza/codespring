@@ -1,127 +1,85 @@
 import { useQuery } from '@tanstack/react-query';
-import { Download, Search, Award, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { StudentDashboardLayout } from '@/components/layout/StudentDashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/features/auth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { Award, Download, Eye } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Certificate {
   id: string;
-  courseTitle: string;
-  issuedDate: string;
-  grade: number;
-  instructorName: string;
-  certificateUrl: string;
-  status: 'issued' | 'pending';
-  completionDate: string;
+  courseId: string;
+  userId: string;
+  issuedAt: string;
+  course: {
+    title: string;
+    instructor: {
+      name: string;
+    };
+  };
 }
 
 export function CertificatesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { token } = useAuth();
 
   const { data: certificates, isLoading } = useQuery<Certificate[]>({
     queryKey: ['certificates'],
     queryFn: async () => {
-      const response = await api.get('/student/certificates');
-      return response.data;
+      const response = await fetch('http://localhost:5000/api/certificates', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch certificates');
+      return response.json();
     },
   });
 
-  const filteredCertificates = certificates?.filter(cert =>
-    cert.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cert.instructorName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleDownload = async (certificateId: string) => {
-    try {
-      const response = await api.get(`/student/certificates/${certificateId}/download`, {
-        responseType: 'blob',
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `certificate-${certificateId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      toast.error('Failed to download certificate. Please try again.');
-    }
-  };
-
   return (
-    <StudentDashboardLayout>
-      <div className="container py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Certificates</h1>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search certificates..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCertificates?.map((certificate) => (
-            <Card key={certificate.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-primary" />
-                    {certificate.courseTitle}
-                  </CardTitle>
-                  <Badge variant={certificate.status === 'issued' ? 'default' : 'secondary'}>
-                    {certificate.status === 'issued' ? 'Issued' : 'Pending'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">
-                      Instructor: {certificate.instructorName}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {format(new Date(certificate.completionDate), 'PPP')}
-                    </div>
-                    {certificate.grade && (
-                      <div className="text-sm font-medium">
-                        Grade: {certificate.grade}%
-                      </div>
-                    )}
-                  </div>
-                  {certificate.status === 'issued' && (
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleDownload(certificate.id)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Certificate
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {filteredCertificates?.length === 0 && (
-            <div className="col-span-full text-center text-muted-foreground py-12">
-              No certificates found.
-            </div>
-          )}
-        </div>
+    <div className="container mx-auto p-4 max-w-5xl">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">My Certificates</h1>
       </div>
-    </StudentDashboardLayout>
+
+      <div className="grid gap-6">
+        {certificates?.map((cert) => (
+          <div
+            key={cert.id}
+            className="border rounded-lg p-6 bg-card flex items-center justify-between"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Award className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{cert.course.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Instructor: {cert.course.instructor.name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Issued: {format(new Date(cert.issuedAt), 'MMMM d, yyyy')}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                View
+              </Button>
+              <Button size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {certificates?.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="font-semibold mb-2">No Certificates Yet</h3>
+            <p>Complete courses to earn certificates</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 } 

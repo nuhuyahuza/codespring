@@ -1,18 +1,16 @@
-import { Router } from 'express';
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
-import { prisma } from '../lib/prisma';
-import { generateCertificatePDF } from '../lib/certificates';
 
-const router = Router();
+const router = express.Router();
+const prisma = new PrismaClient();
 
-// Get all certificates for a student
-router.get('/student/certificates', authenticateUser, async (req, res) => {
+// Get user's certificates
+router.get('/', authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
-
     const certificates = await prisma.certificate.findMany({
       where: {
-        userId,
+        userId: req.user!.id,
       },
       include: {
         course: {
@@ -27,69 +25,88 @@ router.get('/student/certificates', authenticateUser, async (req, res) => {
         },
       },
       orderBy: {
-        issuedDate: 'desc',
+        issuedAt: 'desc',
       },
     });
 
-    const formattedCertificates = certificates.map(cert => ({
-      id: cert.id,
-      courseTitle: cert.course.title,
-      issuedDate: cert.issuedDate,
-      grade: cert.grade,
-      instructorName: cert.course.instructor.name,
-      certificateUrl: cert.certificateUrl,
-      status: cert.isIssued ? 'issued' : 'pending',
-      completionDate: cert.completionDate,
-    }));
-
-    res.json(formattedCertificates);
+    res.json(certificates);
   } catch (error) {
     console.error('Error fetching certificates:', error);
     res.status(500).json({ error: 'Failed to fetch certificates' });
   }
 });
 
-// Download certificate
-router.get('/student/certificates/:certificateId/download', authenticateUser, async (req, res) => {
+// Generate certificate for completed course
+router.post('/:courseId', authenticateUser, async (req, res) => {
   try {
-    const { certificateId } = req.params;
+    const { courseId } = req.params;
     const userId = req.user!.id;
 
-    const certificate = await prisma.certificate.findFirst({
+    // Check if course is completed
+    const enrollment = await prisma.enrollment.findUnique({
       where: {
-        id: certificateId,
-        userId,
-        isIssued: true,
+        userId_courseId: {
+          userId,
+          courseId,
+        },
       },
       include: {
-        user: true,
         course: {
           include: {
-            instructor: true,
+            lessons: true,
           },
         },
       },
     });
 
-    if (!certificate) {
-      return res.status(404).json({ error: 'Certificate not found' });
+    if (!enrollment) {
+      return res.status(404).json({ error: 'Enrollment not found' });
     }
 
-    const pdfBuffer = await generateCertificatePDF({
-      studentName: certificate.user.name,
-      courseName: certificate.course.title,
-      instructorName: certificate.course.instructor.name,
-      completionDate: certificate.completionDate,
-      grade: certificate.grade,
-      certificateId: certificate.id,
+    // Check if all lessons are completed
+    const lessonProgress = await prisma.lessonProgress.findMany({
+      where: {
+        userId,
+        lesson: {
+          courseId,
+        },
+      },
     });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=certificate-${certificateId}.pdf`);
-    res.send(pdfBuffer);
+    const allLessonsCompleted = enrollment.course.lessons.every(lesson =>
+      lessonProgress.some(progress => 
+        progress.lessonId === lesson.id && progress.completed
+      )
+    );
+
+    if (!allLessonsCompleted) {
+      return res.status(400).json({ error: 'Course not completed' });
+    }
+
+    // Create certificate
+    const certificate = await prisma.certificate.create({
+      data: {
+        courseId,
+        userId,
+      },
+      include: {
+        course: {
+          select: {
+            title: true,
+            instructor: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json(certificate);
   } catch (error) {
-    console.error('Error downloading certificate:', error);
-    res.status(500).json({ error: 'Failed to download certificate' });
+    console.error('Error generating certificate:', error);
+    res.status(500).json({ error: 'Failed to generate certificate' });
   }
 });
 

@@ -498,4 +498,82 @@ router.get('/:id/learn', authenticateUser, async (req, res) => {
   }
 });
 
+// Add this endpoint to handle lesson progress
+router.post('/:courseId/lessons/:lessonId/progress', authenticateUser, async (req, res) => {
+  try {
+    const { courseId, lessonId } = req.params;
+    const { completed, timeSpent } = req.body;
+    const userId = req.user!.id;
+
+    console.log('Progress Update Request:', {
+      courseId,
+      lessonId,
+      userId,
+      completed,
+      timeSpent
+    });
+
+    // First check if user is enrolled in the course
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    console.log('Enrollment check:', enrollment);
+
+    if (!enrollment) {
+      return res.status(403).json({ error: 'Not enrolled in this course' });
+    }
+
+    // Then check if lesson exists and belongs to the course
+    const lesson = await prisma.lesson.findFirst({
+      where: { 
+        id: lessonId,
+        courseId,
+      },
+    });
+
+    console.log('Lesson check:', lesson);
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    // Update or create progress
+    const progress = await prisma.lessonProgress.upsert({
+      where: {
+        userId_lessonId: {
+          userId,
+          lessonId,
+        },
+      },
+      update: {
+        completed,
+        timeSpent: {
+          increment: timeSpent,
+        },
+        updatedAt: new Date(),
+      },
+      create: {
+        id: crypto.randomUUID(),
+        userId,
+        lessonId,
+        completed,
+        timeSpent,
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log('Progress updated:', progress);
+    res.json(progress);
+  } catch (error) {
+    console.error('Error updating lesson progress:', error);
+    res.status(500).json({ error: 'Failed to update lesson progress' });
+  }
+});
+
 export default router; 

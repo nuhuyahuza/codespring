@@ -11,6 +11,7 @@ import groupRoutes from './routes/groups';
 import studentRoutes from './routes/student';
 import instructorRoutes from './routes/instructor';
 import { setupChatServer } from './websocket/chat';
+import certificatesRoutes from './routes/certificates';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/instructor', instructorRoutes);
+app.use('/api/certificates', certificatesRoutes);
 
 // Setup WebSocket chat server
 setupChatServer(io);

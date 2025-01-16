@@ -109,26 +109,27 @@ model Submission {
 }
 
 model Group {
-  id          String       @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  description String       @db.Text
-  course      Course       @relation(fields: [courseId], references: [id])
+  description String    @db.Text
   courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
   members     GroupMember[]
   messages    Message[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  resources   Resource[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([courseId])
 }
 
 model GroupMember {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  group     Group    @relation(fields: [groupId], references: [id])
   groupId   String
-  role      String   @default("member")
+  role      String   @default("MEMBER") // MEMBER, MODERATOR, ADMIN
+  user      User     @relation(fields: [userId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -140,10 +141,10 @@ model GroupMember {
 model Message {
   id        String   @id @default(uuid())
   content   String   @db.Text
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  group     Group    @relation(fields: [groupId], references: [id])
   groupId   String
+  user      User     @relation(fields: [userId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -200,4 +201,35 @@ model Assignment {
 enum SubmissionStatus {
   SUBMITTED
   GRADED
+}
+
+model Certificate {
+  id        String   @id @default(uuid())
+  courseId  String
+  userId    String
+  issuedAt  DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([userId])
+}
+
+model Resource {
+  id          String   @id @default(uuid())
+  name        String
+  fileUrl     String
+  fileType    String
+  groupId     String
+  uploadedBy  String
+  group       Group    @relation(fields: [groupId], references: [id])
+  user        User     @relation(fields: [uploadedBy], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([groupId])
+  @@index([uploadedBy])
 }

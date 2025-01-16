@@ -10,6 +10,12 @@ import {
   Home, BookOpen, Users, Award, Settings, LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Course {
   id: string;
@@ -106,32 +112,40 @@ export function CourseLearnPage() {
       completed: boolean;
       timeSpent: number;
     }) => {
-      if (!token) throw new Error('Not authenticated');
+      if (!token || !courseId) throw new Error('Not authenticated or missing courseId');
       
-      const response = await fetch(
-        `http://localhost:5000/api/lessons/${lessonId}/progress`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ completed, timeSpent }),
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/courses/${courseId}/lessons/${lessonId}/progress`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ completed, timeSpent }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update progress');
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update progress');
+        const data = await response.json();
+        console.log('Progress response:', data);
+        return data;
+      } catch (error) {
+        console.error('Progress mutation error:', error);
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['course', courseId, 'learn'] });
       toast.success('Progress updated successfully');
     },
     onError: (error) => {
+      console.error('Progress mutation error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update progress');
     },
   });
@@ -252,28 +266,77 @@ export function CourseLearnPage() {
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
               CS
             </div>
-            <nav className="flex-1 flex flex-col items-center gap-4 pt-8">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-                <Home className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/courses')}>
-                <BookOpen className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/community')}>
-                <Users className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/certificates')}>
-                <Award className="h-5 w-5" />
-              </Button>
-            </nav>
-            <div className="mt-auto flex flex-col gap-4">
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={0}>
+              <nav className="flex-1 flex flex-col items-center gap-4 pt-8">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/student/dashboard')}>
+                      <Home className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Dashboard
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/student/courses')}>
+                      <BookOpen className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    My Courses
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/student/community')}>
+                      <Users className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Community
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/student/certificates')}>
+                      <Award className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Certificates
+                  </TooltipContent>
+                </Tooltip>
+              </nav>
+
+              <div className="mt-auto flex flex-col gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Settings
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Sign Out
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -393,75 +456,77 @@ export function CourseLearnPage() {
               </div>
             </>
 
-            {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="container max-w-4xl mx-auto px-4 py-6">
-                {currentLesson && (
-                  <div className="p-4 md:p-6 max-w-4xl mx-auto">
-                    <div className="mb-4 md:mb-6">
-                      <h3 className="text-xl md:text-2xl font-bold mb-2">{currentLesson.title}</h3>
-                      <p className="text-muted-foreground">
-                        Lesson {currentLessonIndex + 1} of {totalLessons}
-                      </p>
-                    </div>
-
-                    {currentLesson.videoUrl && (
+            {/* Main Content Area - Updated layout */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto">
+                <div className="container max-w-4xl mx-auto px-4 py-6">
+                  {currentLesson && (
+                    <div className="p-4 md:p-6 max-w-4xl mx-auto">
                       <div className="mb-4 md:mb-6">
-                        <div className="relative aspect-video">
-                          <VideoPlayer
-                            url={currentLesson.videoUrl}
-                            isFullscreen={isFullscreen}
-                            onFullscreenChange={setIsFullscreen}
-                          />
-                        </div>
+                        <h3 className="text-xl md:text-2xl font-bold mb-2">{currentLesson.title}</h3>
+                        <p className="text-muted-foreground">
+                          Lesson {currentLessonIndex + 1} of {totalLessons}
+                        </p>
                       </div>
-                    )}
 
-                    <div className="prose dark:prose-invert max-w-none mb-6 text-sm md:text-base">
-                      {currentLesson.content}
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center">
-                      <Button
-                        variant="outline"
-                        className="w-full md:w-auto"
-                        disabled={currentLessonIndex === 0}
-                        onClick={handlePreviousLesson}
-                      >
-                        Previous Lesson
-                      </Button>
-
-                      {currentLesson?.LessonProgress?.[0]?.completed ? (
-                        <Button
-                          className="w-full md:w-auto"
-                          disabled={currentLessonIndex === course.Lesson.length - 1}
-                          onClick={handleNextLesson}
-                        >
-                          Next Lesson
-                        </Button>
-                      ) : (
-                        <Button
-                          className="w-full md:w-auto"
-                          onClick={handleLessonComplete}
-                          disabled={!previousLessonsCompleted || progressMutation.isPending}
-                        >
-                          {progressMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            'Complete Lesson'
-                          )}
-                        </Button>
+                      {currentLesson.videoUrl && (
+                        <div className="mb-4 md:mb-6">
+                          <div className="relative aspect-video">
+                            <VideoPlayer
+                              url={currentLesson.videoUrl}
+                              isFullscreen={isFullscreen}
+                              onFullscreenChange={setIsFullscreen}
+                            />
+                          </div>
+                        </div>
                       )}
+
+                      <div className="prose dark:prose-invert max-w-none mb-6 text-sm md:text-base">
+                        {currentLesson.content}
+                      </div>
+
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center">
+                        <Button
+                          variant="outline"
+                          className="w-full md:w-auto"
+                          disabled={currentLessonIndex === 0}
+                          onClick={handlePreviousLesson}
+                        >
+                          Previous Lesson
+                        </Button>
+
+                        {currentLesson?.LessonProgress?.[0]?.completed ? (
+                          <Button
+                            className="w-full md:w-auto"
+                            disabled={currentLessonIndex === course.Lesson.length - 1}
+                            onClick={handleNextLesson}
+                          >
+                            Next Lesson
+                          </Button>
+                        ) : (
+                          <Button
+                            className="w-full md:w-auto"
+                            onClick={handleLessonComplete}
+                            disabled={!previousLessonsCompleted || progressMutation.isPending}
+                          >
+                            {progressMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              'Complete Lesson'
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Footer */}
-              <footer className="mt-auto border-t py-4 px-6 text-center text-sm text-muted-foreground">
+              {/* Updated Footer */}
+              <footer className="flex-shrink-0 border-t py-2 px-6 text-center text-xs text-muted-foreground bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <p>© {new Date().getFullYear()} CodeSpring. All rights reserved.</p>
               </footer>
             </div>

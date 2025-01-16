@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Users, 
   MessageSquare, 
@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { CommunityGroup } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -26,10 +25,170 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+interface CommunityGroup {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  memberCount: number;
+  isJoined: boolean;
+  recentActivity?: {
+    title: string;
+    type: string;
+    timestamp: string;
+  }[];
+}
+
+const createGroupSchema = z.object({
+  name: z.string().min(3, 'Name must be at least 3 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
+  category: z.enum(['study', 'project', 'discussion', 'other']),
+});
+
+type CreateGroupFormData = z.infer<typeof createGroupSchema>;
+
+function CreateGroupDialog() {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  
+  const form = useForm<CreateGroupFormData>({
+    resolver: zodResolver(createGroupSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      category: 'study',
+    },
+  });
+
+  const createGroupMutation = useMutation({
+    mutationFn: async (data: CreateGroupFormData) => {
+      const response = await api.post('/student/community-groups', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Group created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['communityGroups'] });
+      setOpen(false);
+      form.reset();
+    },
+    onError: (error) => {
+      toast.error('Failed to create group. Please try again.');
+      console.error('Error creating group:', error);
+    },
+  });
+
+  const onSubmit = (data: CreateGroupFormData) => {
+    createGroupMutation.mutate(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Group
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Group</DialogTitle>
+          <DialogDescription>
+            Create a new community group to connect with other students
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Group Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter group name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Describe the purpose of your group"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="study">Study Group</SelectItem>
+                      <SelectItem value="project">Project Team</SelectItem>
+                      <SelectItem value="discussion">Discussion Group</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={createGroupMutation.isPending}
+            >
+              {createGroupMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Group'
+              )}
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function CommunityPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState<CommunityGroup | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: groups, isLoading } = useQuery<CommunityGroup[]>({
     queryKey: ['communityGroups'],
@@ -39,20 +198,25 @@ export function CommunityPage() {
     },
   });
 
+  const joinGroupMutation = useMutation({
+    mutationFn: async (groupId: string) => {
+      const response = await api.post(`/student/community-groups/${groupId}/join`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Successfully joined the group!');
+      queryClient.invalidateQueries({ queryKey: ['communityGroups'] });
+    },
+    onError: (error) => {
+      console.error('Error joining group:', error);
+      toast.error('Failed to join group. Please try again.');
+    },
+  });
+
   const filteredGroups = groups?.filter(group =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     group.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleJoinGroup = async (groupId: string) => {
-    try {
-      await api.post(`/student/community-groups/${groupId}/join`);
-      toast.success('Successfully joined the group!');
-    } catch (error) {
-      console.error('Error joining group:', error);
-      toast.error('Failed to join group. Please try again.');
-    }
-  };
 
   if (isLoading) {
     return (
@@ -69,10 +233,7 @@ export function CommunityPage() {
       <div className="container py-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Community Groups</h1>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Group
-          </Button>
+          <CreateGroupDialog />
         </div>
 
         <div className="relative">
@@ -123,7 +284,8 @@ export function CommunityPage() {
                   <Button 
                     className="w-full"
                     variant={group.isJoined ? "outline" : "default"}
-                    onClick={() => !group.isJoined && handleJoinGroup(group.id)}
+                    onClick={() => !group.isJoined && joinGroupMutation.mutate(group.id)}
+                    disabled={joinGroupMutation.isPending}
                   >
                     {group.isJoined ? 'View Discussions' : 'Join Group'}
                   </Button>
@@ -134,95 +296,5 @@ export function CommunityPage() {
         </div>
       </div>
     </StudentDashboardLayout>
-  );
-}
-
-function CreateGroupDialog() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'study', // default category
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsSubmitting(true);
-      await api.post('/student/community-groups', formData);
-      toast.success('Group created successfully!');
-      // Close dialog and refetch groups
-    } catch (error) {
-      console.error('Error creating group:', error);
-      toast.error('Failed to create group. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Group
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Group</DialogTitle>
-          <DialogDescription>
-            Create a new community group to connect with other students
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Group Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="category">Category</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="study">Study Group</SelectItem>
-                <SelectItem value="project">Project Team</SelectItem>
-                <SelectItem value="discussion">Discussion Group</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Group'
-            )}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 } 
