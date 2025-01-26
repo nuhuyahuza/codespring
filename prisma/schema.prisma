@@ -17,43 +17,54 @@ enum Role {
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  password      String
-  name          String
-  role          Role       @default(STUDENT)
-  status        String     @default("ACTIVE")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                String          @id @default(uuid())
+  email             String          @unique
+  password          String
+  name              String
+  role              Role            @default(STUDENT)
+  status            String          @default("ACTIVE")
+  avatar            String?
+  bio               String?         @db.Text
+  preferredLanguage String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   // Relations
-  courses       Course[]      @relation("InstructorCourses")
-  enrollments   Enrollment[]
-  submissions   Submission[]
-  groupMembers  GroupMember[]
-  messages      Message[]
-  lessonProgress LessonProgress[]
-  reviews       CourseReview[]
+  courses           Course[]        @relation("InstructorCourses")
+  enrollments       Enrollment[]
+  submissions       Submission[]
+  groupMembers      GroupMember[]
+  messages          Message[]
+  lessonProgress    LessonProgress[]
+  reviews           CourseReview[]
+  resources         Resource[]
+  certificates      Certificate[]
+  testimonials      Testimonial[]
 }
 
 model Course {
-  id          String       @id @default(uuid())
-  title       String
-  description String       @db.Text
-  price       Float
-  category    String       @default("other")
-  level       String       @default("beginner")
-  duration    Int         @default(0)
-  status      String       @default("DRAFT")
-  imageUrl    String?
-  instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
-  instructorId String
-  enrollments Enrollment[]
-  groups      Group[]
-  lessons     Lesson[]
-  reviews     CourseReview[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String          @id @default(uuid())
+  title         String
+  description   String          @db.Text
+  price         Float
+  category      String          @default("other")
+  level         String          @default("beginner")
+  duration      Int            @default(0)
+  status        String          @default("DRAFT")
+  imageUrl      String?
+  instructorId  String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  instructor    User            @relation("InstructorCourses", fields: [instructorId], references: [id])
+  enrollments   Enrollment[]
+  groups        Group[]
+  lessons       Lesson[]
+  reviews       CourseReview[]
+  assignments   Assignment[]
+  certificates  Certificate[]
+  testimonials  Testimonial[]
 
   @@index([instructorId])
 }
@@ -109,16 +120,16 @@ model Submission {
 }
 
 model Group {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   name        String
-  description String    @db.Text
+  description String       @db.Text
   courseId    String
-  course      Course    @relation(fields: [courseId], references: [id])
+  course      Course       @relation(fields: [courseId], references: [id])
   members     GroupMember[]
   messages    Message[]
   resources   Resource[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([courseId])
 }

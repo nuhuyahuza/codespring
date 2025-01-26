@@ -9,7 +9,14 @@
     "build": "vite build && cd server && yarn build",
     "start": "cd server && yarn start",
     "test": "jest && cd server && yarn test",
-    "seed": "cd server && yarn seed"
+    "seed": "cd server && yarn seed",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:update": "yarn db:generate && yarn db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

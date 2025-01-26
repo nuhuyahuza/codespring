@@ -1,30 +1,12 @@
 import { Router } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Type definitions
-type EnrollmentWithCourse = Prisma.EnrollmentGetPayload<{
-  include: {
-    course: {
-      include: {
-        instructor: {
-          select: {
-            id: true;
-            name: true;
-          };
-        };
-        lessons: {
-          include: {
-            progress: true;
-          };
-        };
-      };
-    };
-  };
-}>;
 
 type DailyProgress = {
   hoursSpent: number;
@@ -114,6 +96,67 @@ router.get('/', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('\n❌ Error fetching student dashboard:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+router.post('/enroll', authenticateUser, async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    const userId = req.user!.id;
+
+    // Check if already enrolled
+    const existingEnrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (existingEnrollment) {
+      return res.status(400).json({ error: 'Already enrolled in this course' });
+    }
+
+    // Create enrollment with required fields
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId,
+        courseId,
+        status: 'active',
+        progress: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json(enrollment);
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    res.status(500).json({ error: 'Failed to enroll in course' });
+  }
+});
+
+// Add endpoint to check enrollment status
+router.get('/courses/:courseId/enrollment-status', authenticateUser, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    res.json({ isEnrolled: !!enrollment });
+  } catch (error) {
+    console.error('Error checking enrollment status:', error);
+    res.status(500).json({ error: 'Failed to check enrollment status' });
   }
 });
 

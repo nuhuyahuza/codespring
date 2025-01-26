@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authenticateUser } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -29,10 +30,14 @@ router.post('/signup', async (req, res) => {
     // Create user
     const user = await prisma.user.create({
       data: {
+        id: crypto.randomUUID(),
         name,
         email,
         password: hashedPassword,
         role,
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
@@ -62,6 +67,7 @@ router.post('/signup', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
+  console.log("Nhu",req);
   try {
     const { email, password } = req.body;
 

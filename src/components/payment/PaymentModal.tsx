@@ -30,26 +30,16 @@ export function PaymentModal({
     try {
       setIsProcessing(true);
       
-      // In development mode, create enrollment directly
       if (isDev) {
         console.log('Submitting enrollment for course:', courseId);
         
-        const response = await api.post(
-          `/courses/${courseId}/enroll`,
-          {},
-          { 
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true 
-          }
-        );
+        const response = await api.post(`/courses/${courseId}/enroll`, {});
 
-        if (!response.data.success) {
+        if (!response.success) {
           throw new Error('Enrollment failed');
         }
 
-        // Update the user's enrolled courses in auth context
         await updateUser();
-        
         toast.success('Successfully enrolled in course!');
         onPaymentComplete();
       } else {
@@ -66,17 +56,8 @@ export function PaymentModal({
 
   const handlePaymentSuccess = async () => {
     try {
-      // Call your API to enroll in the course
-      await api.post(
-        `/courses/${courseId}/enroll`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Update the user's enrolled courses in auth context
+      await api.post(`/courses/${courseId}/enroll`, {});
       await updateUser();
-      
-      // Call the onPaymentComplete callback
       onPaymentComplete();
     } catch (error) {
       console.error('Error enrolling in course:', error);
