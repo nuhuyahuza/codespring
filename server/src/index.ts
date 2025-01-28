@@ -9,7 +9,7 @@ import courseRoutes from './routes/courses';
 import submissionRoutes from './routes/submissions';
 import groupRoutes from './routes/groups';
 import studentRoutes from './routes/student';
-import instructorRoutes from './routes/instructor';
+import instructorRoutes from './routes/instructors';
 import { setupChatServer } from './websocket/chat';
 import certificatesRoutes from './routes/certificates';
 
@@ -53,7 +53,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/student', studentRoutes);
-app.use('/api/instructor', instructorRoutes);
+app.use('/api/instructors', instructorRoutes);
 app.use('/api/certificates', certificatesRoutes);
 
 // Setup WebSocket chat server

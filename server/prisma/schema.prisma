@@ -184,6 +184,7 @@ model User {
   occupation             String?
   phoneNumber            String?
   preferredLanguage      String?
+  instructorProfile      Json?            // Store all instructor-specific data here
   Course                 Course[]         @relation("InstructorCourses")
   CourseReview           CourseReview[]
   Enrollment             Enrollment[]
