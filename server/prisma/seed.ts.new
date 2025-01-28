@@ -63,11 +63,10 @@ export async function seed() {
         price: 99.99,
         category: 'development',
         level: 'beginner',
-        duration: '30.50',
-        status: 'PUBLISHED',
+        duration: new Prisma.Decimal(30.5),
         imageUrl: '/courses/web-dev-intro.jpg',
         thumbnail: '/courses/web-dev-thumb.jpg',
-        rating: '4.50',
+        rating: new Prisma.Decimal(4.5),
         learningObjectives: JSON.stringify([
           'Understand HTML5 and semantic markup',
           'Master CSS layouts and responsive design',
@@ -79,6 +78,7 @@ export async function seed() {
           'A modern web browser'
         ]),
         instructorId: instructor.id,
+        status: 'PUBLISHED',
         createdAt: new Date(),
         updatedAt: new Date(),
         lessons: {

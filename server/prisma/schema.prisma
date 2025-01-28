@@ -8,25 +8,33 @@ datasource db {
 }
 
 model Course {
-  id           String         @id
-  title        String
-  description  String         @db.Text
-  price        Float
-  instructorId String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime
-  category     String         @default("other")
-  duration     Int            @default(0)
-  imageUrl     String?
-  level        String         @default("beginner")
-  status       String         @default("DRAFT")
-  User         User           @relation(fields: [instructorId], references: [id])
-  CourseReview CourseReview[]
-  Enrollment   Enrollment[]
-  Group        Group[]
-  Lesson       Lesson[]
+  id                String          @id @default(uuid())
+  title             String
+  description       String          @db.Text
+  price             Float
+  category          String          @default("other")
+  level             String          @default("beginner")
+  duration          String          @default("0.00")
+  status            String          @default("DRAFT")
+  imageUrl          String?
+  thumbnail         String?
+  rating            String?         @default("0.00")
+  learningObjectives Json?
+  requirements      Json?
+  instructorId      String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  instructor        User            @relation("InstructorCourses", fields: [instructorId], references: [id])
+  enrollments       Enrollment[]
+  groups            Group[]
+  lessons           Lesson[]
+  reviews           CourseReview[]
 
   @@index([instructorId])
+  @@index([category])
+  @@index([level])
 }
 
 model CourseReview {
@@ -57,7 +65,7 @@ model Enrollment {
   User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, courseId])
-  @@index([courseId], map: "Enrollment_courseId_fkey")
+  @@index([courseId])
 }
 
 model Group {
@@ -71,7 +79,7 @@ model Group {
   GroupMember GroupMember[]
   Message     Message[]
 
-  @@index([courseId], map: "Group_courseId_fkey")
+  @@index([courseId])
 }
 
 model GroupMember {
@@ -85,29 +93,29 @@ model GroupMember {
   User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, groupId])
-  @@index([groupId], map: "GroupMember_groupId_fkey")
+  @@index([groupId])
 }
 
 model Lesson {
   id             String           @id
   title          String
-  content        String           @db.Text
+  content        String          @db.Text
   videoUrl       String?
   order          Int
   courseId       String
-  createdAt      DateTime         @default(now())
+  createdAt      DateTime        @default(now())
   updatedAt      DateTime
-  Course         Course           @relation(fields: [courseId], references: [id])
+  Course         Course          @relation(fields: [courseId], references: [id])
   LessonProgress LessonProgress[]
   Submission     Submission[]
 
-  @@index([courseId], map: "Lesson_courseId_fkey")
+  @@index([courseId])
 }
 
 model LessonProgress {
   id        String   @id
   completed Boolean  @default(false)
-  timeSpent Int      @default(0)
+  timeSpent Int     @default(0)
   lessonId  String
   userId    String
   createdAt DateTime @default(now())
@@ -116,7 +124,7 @@ model LessonProgress {
   User      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, lessonId])
-  @@index([lessonId], map: "LessonProgress_lessonId_fkey")
+  @@index([lessonId])
 }
 
 model Message {
@@ -129,8 +137,8 @@ model Message {
   Group     Group    @relation(fields: [groupId], references: [id])
   User      User     @relation(fields: [userId], references: [id])
 
-  @@index([groupId], map: "Message_groupId_fkey")
-  @@index([userId], map: "Message_userId_fkey")
+  @@index([groupId])
+  @@index([userId])
 }
 
 model Submission {
@@ -145,19 +153,8 @@ model Submission {
   Lesson    Lesson   @relation(fields: [lessonId], references: [id])
   User      User     @relation(fields: [userId], references: [id])
 
-  @@index([lessonId], map: "Submission_lessonId_fkey")
-  @@index([userId], map: "Submission_userId_fkey")
-}
-
-model Testimonial {
-  id        String   @id
-  content   String   @db.Text
-  studentId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-  User      User     @relation(fields: [studentId], references: [id])
-
-  @@index([studentId])
+  @@index([lessonId])
+  @@index([userId])
 }
 
 model User {
@@ -177,18 +174,19 @@ model User {
   occupation             String?
   phoneNumber            String?
   preferredLanguage      String?
-  Course                 Course[]
+  Course                 Course[]         @relation("InstructorCourses")
   CourseReview           CourseReview[]
   Enrollment             Enrollment[]
   GroupMember            GroupMember[]
   LessonProgress         LessonProgress[]
   Message                Message[]
   Submission             Submission[]
-  Testimonial            Testimonial[]
+
+  @@index([email])
 }
 
 enum User_role {
   STUDENT
   INSTRUCTOR
   ADMIN
-}
+} 
