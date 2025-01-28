@@ -48,3 +48,13 @@ export default tseslint.config({
   },
 })
 ```
+
+# Codespring Learning Platform
+
+## Environment Setup
+
+1. Copy `.env.example` to create your local environment file:
+
+```bash
+cp .env.example .env
+```

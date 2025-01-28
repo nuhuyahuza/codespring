@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, Users, MessageCircle, Star } from 'lucide-react';
 import axios from 'axios';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useAuth } from '@/features/auth';
+import { Navigation } from '@/components/layout/Navigation';
 
 interface Course {
   id: string;
@@ -54,6 +56,7 @@ const TESTIMONIALS: Testimonial[] = [
 ];
 
 export function LandingPage() {
+  const { user } = useAuth();
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,11 +236,19 @@ export function LandingPage() {
               Learn from expert instructors, build real projects, and join a
               community of passionate developers.
             </p>
-            <Link to="/signup">
-              <button className="px-8 py-4 bg-accent text-accent-foreground rounded-lg text-lg font-semibold hover:bg-accent/90 flex items-center gap-2">
-                Get Started <ArrowRight className="w-5 h-5" />
-              </button>
-            </Link>
+            {user ? (
+              <Link to={user.role === 'STUDENT' ? '/courses' : '/dashboard/instructor'}>
+                <button className="px-8 py-4 bg-accent text-accent-foreground rounded-lg text-lg font-semibold hover:bg-accent/90 flex items-center gap-2">
+                  {user.role === 'STUDENT' ? 'Browse Courses' : 'Go to Dashboard'} <ArrowRight className="w-5 h-5" />
+                </button>
+              </Link>
+            ) : (
+              <Link to="/signup">
+                <button className="px-8 py-4 bg-accent text-accent-foreground rounded-lg text-lg font-semibold hover:bg-accent/90 flex items-center gap-2">
+                  Get Started <ArrowRight className="w-5 h-5" />
+                </button>
+              </Link>
+            )}
           </div>
         </div>
       </header>

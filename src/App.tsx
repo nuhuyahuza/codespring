@@ -24,6 +24,7 @@ import { CommunityPage } from '@/pages/student/CommunityPage';
 import { CertificatesPage } from '@/pages/student/CertificatesPage';
 import { StudentCoursesPage } from '@/pages/student/StudentCoursesPage';
 import { CourseLearnPage } from '@/pages/student/CourseLearnPage';
+import { CourseDetailPage } from '@/pages/CourseDetailPage';
 
 function App() {
   const { isAuthenticated, token } = useAuth();
@@ -42,7 +43,7 @@ function App() {
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/courses/:courseId" element={<CourseDetailPage />} />
           <Route path="/instructors" element={<InstructorsPage />} />
           <Route path="/about" element={<AboutPage />} />
           
