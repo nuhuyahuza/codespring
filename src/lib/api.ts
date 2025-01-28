@@ -68,6 +68,7 @@ axiosInstance.interceptors.response.use(
 );
 
 interface RequestConfig {
+  params?: Record<string, any>;
   headers?: Record<string, string>;
   withCredentials?: boolean;
 }

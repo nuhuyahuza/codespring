@@ -8,7 +8,7 @@ interface CourseCardProps {
     description: string;
     price: number;
     imageUrl?: string;
-    User: {
+    instructor: {
       name: string;
     };
   };
@@ -37,7 +37,7 @@ export function CourseCard({ course }: CourseCardProps) {
           </p>
           <div className="mt-3 flex items-center justify-between">
             <span className="text-sm text-gray-600">
-              By {course.User.name}
+              By {course.instructor.name}
             </span>
             <span className="font-semibold text-primary">
               ${course.price.toFixed(2)}

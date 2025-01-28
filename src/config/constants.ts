@@ -1,4 +1,11 @@
-export const DEFAULT_COURSE_IMAGE = '/images/course-placeholder.svg';
+export const IMAGES = {
+  COURSE: {
+    DEFAULT: '/images/placeholders/course-default.jpg',
+    THUMBNAIL: '/images/placeholders/course-thumbnail.jpg'
+  }
+} as const;
+
+export const DEFAULT_COURSE_IMAGE = IMAGES.COURSE.DEFAULT;
 
 // Course levels
 export const COURSE_LEVELS = {

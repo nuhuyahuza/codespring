@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 // Type definitions
 type CourseWithProgress = Prisma.CourseGetPayload<{
   include: {
-    User: {
+    instructor: {
       select: {
         id: true;
         name: true;
@@ -24,7 +24,7 @@ type CourseWithProgress = Prisma.CourseGetPayload<{
         };
       };
     };
-    Enrollment: {
+    enrollments: {
       where: {
         userId: string;
       };
@@ -45,14 +45,14 @@ router.get('/', async (req, res) => {
         }
       ],
       include: {
-        User: {
+        instructor: {
           select: {
             name: true,
           },
         },
         _count: {
           select: {
-            Enrollment: true,
+            enrollments: true,
           },
         },
       },
@@ -72,45 +72,27 @@ router.get('/:id', async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        User: {
+        instructor: {
           select: {
             id: true,
             name: true,
           },
         },
-        Lesson: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: {
-            id: true,
-            title: true,
-            order: true,
-          },
-        },
+        lessons: true,
         _count: {
           select: {
-            Enrollment: true,
-            Lesson: true,
-          },
-        },
-      },
+            enrollments: true,
+            lessons: true
+          }
+        }
+      }
     });
 
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Format response with preview data
-    res.json({
-      ...course,
-      lessonPreviews: course.Lesson.map(l => l.title),
-      _count: {
-        ...course._count,
-        enrolled: course._count.Enrollment,
-      },
-      Lesson: undefined, // Don't expose full lesson data
-    });
+    res.json(course);
   } catch (error) {
     console.error('Error fetching course:', error);
     res.status(500).json({ error: 'Failed to fetch course' });
@@ -131,7 +113,7 @@ router.post('/', authenticateUser, async (req, res) => {
         updatedAt: new Date(),
       },
       include: {
-        User: {
+        instructor: {
           select: {
             name: true,
           },
@@ -216,13 +198,13 @@ router.get('/:id/content', async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        User: {
+        instructor: {
           select: {
             id: true,
             name: true,
           },
         },
-        Lesson: {
+        lessons: {
           orderBy: {
             order: 'asc',
           },
@@ -234,7 +216,7 @@ router.get('/:id/content', async (req, res) => {
             } : false,
           },
         },
-        Enrollment: userId ? {
+        enrollments: userId ? {
           where: {
             userId,
           },
@@ -246,10 +228,10 @@ router.get('/:id/content', async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    const isEnrolled = userId ? course.Enrollment?.length > 0 : false;
-    const isInstructor = userId ? course.User.id === userId : false;
+    const isEnrolled = userId ? course.enrollments?.length > 0 : false;
+    const isInstructor = userId ? course.instructor.id === userId : false;
 
-    const formattedLessons = course.Lesson.map((lesson, index) => ({
+    const formattedLessons = course.lessons.map((lesson, index) => ({
       id: lesson.id,
       title: lesson.title,
       order: lesson.order,
@@ -265,7 +247,7 @@ router.get('/:id/content', async (req, res) => {
     res.json({
       id: course.id,
       title: course.title,
-      instructor: course.User.id,
+      instructor: course.instructor.id,
       lessons: formattedLessons,
       isEnrolled,
     });
@@ -283,7 +265,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        Lesson: {
+        lessons: {
           include: {
             LessonProgress: {
               where: {
@@ -292,7 +274,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
             },
           },
         },
-        Enrollment: {
+        enrollments: {
           where: {
             userId: req.user!.id,
           },
@@ -304,19 +286,19 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    if (!course.Enrollment.length) {
+    if (!course.enrollments.length) {
       return res.status(403).json({ error: 'Not enrolled in this course' });
     }
 
-    const completedLessons = course.Lesson
+    const completedLessons = course.lessons
       .filter(lesson => lesson.LessonProgress.length > 0 && lesson.LessonProgress[0].completed)
       .map(lesson => lesson.id);
 
-    const totalProgress = course.Lesson.length > 0
-      ? completedLessons.length / course.Lesson.length
+    const totalProgress = course.lessons.length > 0
+      ? completedLessons.length / course.lessons.length
       : 0;
 
-    const totalTimeSpent = course.Lesson.reduce(
+    const totalTimeSpent = course.lessons.reduce(
       (total, lesson) => total + (lesson.LessonProgress[0]?.timeSpent || 0),
       0
     );
@@ -325,7 +307,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       completedLessons,
       totalProgress,
       totalTimeSpent,
-      currentLesson: course.Lesson.find(lesson => !lesson.LessonProgress[0]?.completed)?.id || null,
+      currentLesson: course.lessons.find(lesson => !lesson.LessonProgress[0]?.completed)?.id || null,
     });
   } catch (error) {
     console.error('Error fetching course progress:', error);
@@ -343,8 +325,8 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
-        Lesson: true,
-        Enrollment: {
+        lessons: true,
+        enrollments: {
           where: {
             userId,
           },
@@ -357,7 +339,7 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
     }
 
     // Check if already enrolled
-    if (course.Enrollment.length > 0) {
+    if (course.enrollments.length > 0) {
       return res.status(400).json({ error: 'Already enrolled in this course' });
     }
 
@@ -373,7 +355,7 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
 
     // Create initial progress records for all lessons
     await prisma.$transaction(
-      course.Lesson.map(lesson => 
+      course.lessons.map(lesson => 
         prisma.lessonProgress.create({
           data: {
             id: crypto.randomUUID(),
@@ -408,14 +390,14 @@ router.get('/featured', async (req, res) => {
         }
       ],
       include: {
-        User: {
+        instructor: {
           select: {
             name: true,
           },
         },
         _count: {
           select: {
-            Enrollment: true,
+            enrollments: true,
           },
         },
       },
@@ -427,8 +409,8 @@ router.get('/featured', async (req, res) => {
       description: course.description,
       price: course.price,
       thumbnail: course.imageUrl || '/course-placeholder.jpg',
-      instructor: course.User.name,
-      enrolled: course._count.Enrollment,
+      instructor: course.instructor.name,
+      enrolled: course._count.enrollments,
     }));
 
     res.json(formattedCourses);
@@ -449,12 +431,12 @@ router.get('/:id/learn', authenticateUser, async (req, res) => {
         id,
       },
       include: {
-        User: {
+        instructor: {
           select: {
             name: true,
           },
         },
-        Lesson: {
+        lessons: {
           orderBy: {
             order: 'asc',
           },

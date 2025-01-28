@@ -16,7 +16,9 @@
     "db:reset": "prisma migrate reset",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:update": "yarn db:generate && yarn db:migrate"
+    "db:update": "yarn db:generate && yarn db:migrate",
+    "db:migrate:safe": "ts-node server/scripts/migrate.ts",
+    "db:seed:safe": "ts-node server/scripts/safeSeed.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

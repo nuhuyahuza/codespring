@@ -96,16 +96,26 @@ model GroupMember {
   @@index([groupId])
 }
 
+enum LessonType {
+  VIDEO
+  READING
+  ASSIGNMENT
+}
+
 model Lesson {
-  id             String           @id
+  id             String           @id @default(cuid())
   title          String
-  content        String          @db.Text
-  videoUrl       String?
+  description    String?          @db.Text 
+  content        String?          @db.Text 
+  videoUrl       String?          // For video lessons
+  quizData       Json?            // For quiz content
+  duration       Int?              // in minutes
+  type           LessonType       @default(READING)
   order          Int
   courseId       String
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime         @default(now())
   updatedAt      DateTime
-  Course         Course          @relation(fields: [courseId], references: [id])
+  Course         Course           @relation(fields: [courseId], references: [id])
   LessonProgress LessonProgress[]
   Submission     Submission[]
 

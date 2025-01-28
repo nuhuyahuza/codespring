@@ -1,10 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
@@ -166,7 +161,7 @@ export async function seed() {
         },
       },
     });
-
+console.log(studyGroup);
     console.log('Seed data created successfully');
   } catch (error) {
     console.error('Error seeding database:', error);

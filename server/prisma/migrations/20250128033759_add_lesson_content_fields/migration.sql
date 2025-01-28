@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `Lesson` ADD COLUMN `description` VARCHAR(191) NULL,
+    ADD COLUMN `duration` INTEGER NULL,
+    ADD COLUMN `quizData` JSON NULL,
+    ADD COLUMN `type` ENUM('VIDEO', 'READING', 'ASSIGNMENT') NOT NULL DEFAULT 'READING',
+    MODIFY `content` TEXT NULL;

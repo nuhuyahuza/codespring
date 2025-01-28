@@ -1,25 +1,49 @@
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CourseActions } from '@/components/courses/CourseActions';
 import { Navigation } from '@/components/layout/Navigation';
 import { Button } from '@/components/ui';
-import { Clock, Users, Star, BookOpen, Lightbulb } from 'lucide-react';
+import { Clock, Users, Star, BookOpen, CheckCircle, Play, Award, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/features/auth';
+import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
+import { useState } from 'react';
+
+// Add this type definition
+interface Lesson {
+  id: string;
+  title: string;
+  description?: string;
+  duration: number;
+  type: 'VIDEO' | 'READING' | 'QUIZ' | 'ASSIGNMENT';
+  order: number;
+}
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
   const { user } = useAuth();
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
-      const response = await api.get(`/courses/${courseId}`);
-      console.log("Course", response);
+      const response = await api.get(`/courses/${courseId}`, {
+        params: {
+          include: 'lessons,instructor'
+        }
+      });
+      
+      // Parse JSON strings into arrays
+      if (typeof response.learningObjectives === 'string') {
+        response.learningObjectives = JSON.parse(response.learningObjectives);
+      }
+      if (typeof response.requirements === 'string') {
+        response.requirements = JSON.parse(response.requirements);
+      }
       return response;
     },
   });
-  console.log("Course", course);
+
   // Only fetch enrollment status for students
   const { data: enrollmentStatus } = useQuery({
     queryKey: ['enrollmentStatus', courseId],
@@ -32,135 +56,208 @@ export function CourseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin">⌛</div>
+      <div className="min-h-screen bg-background py-16">
+        <div className="container mx-auto px-4">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded w-2/3 mb-4" />
+            <div className="h-4 bg-muted rounded w-1/2 mb-8" />
+            <div className="aspect-video bg-muted rounded-xl mb-8" />
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="col-span-2 space-y-4">
+                <div className="h-4 bg-muted rounded w-full" />
+                <div className="h-4 bg-muted rounded w-5/6" />
+                <div className="h-4 bg-muted rounded w-4/6" />
+              </div>
+              <div className="h-64 bg-muted rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold">Course not found</h1>
-        <p className="text-muted-foreground">The course you're looking for doesn't exist.</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Course not found</p>
+          <Button asChild>
+            <Link to="/courses">Back to Courses</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-  // Instructor tips section - only shown to instructors viewing others' courses
-  const InstructorTips = () => {
-    if (user?.role !== 'INSTRUCTOR' || user.id === course.instructor.id) return null;
-
-    return (
-      <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-6 mb-8">
-        <h3 className="flex items-center text-lg font-semibold text-green-700 dark:text-green-300 mb-3">
-          <Lightbulb className="w-5 h-5 mr-2" />
-          Instructor Insights
-        </h3>
-        <div className="space-y-4">
-          <p className="text-green-600 dark:text-green-400">
-            Learn from this course's success to enhance your own teaching:
-          </p>
-          <ul className="list-disc list-inside space-y-2 text-green-600 dark:text-green-400">
-            <li>Course structure and progression</li>
-            <li>Content presentation techniques</li>
-            <li>Student engagement methods</li>
-            <li>Pricing and marketing strategies</li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
+  // Ensure arrays are available even if parsing failed
+  const learningObjectives = Array.isArray(course.learningObjectives) ? course.learningObjectives : [];
+  const requirements = Array.isArray(course.requirements) ? course.requirements : [];
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       
-      <div className="container mx-auto px-4 py-8">
-        {user?.role === 'INSTRUCTOR' && <InstructorTips />}
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Course Content - Left Side */}
-          <div className="md:col-span-2 space-y-6">
-            <h1 className="text-3xl font-bold">{course.title}</h1>
-            
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                {course.duration} hours
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-green-600 to-green-800 text-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
+              <p className="text-lg text-white/90 mb-6">{course.description}</p>
+              <div className="flex flex-wrap gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                  <span>{course.rating || '0'} rating</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <span>{course._count?.enrollments || '0'} students</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  <span>{course.duration || '0'} hours</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  <span>{course.level || 'Beginner'}</span>
+                </div>
               </div>
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-1" />
-                {course._count.enrollments} students
-              </div>
-              <div className="flex items-center">
-                <Star className="w-4 h-4 mr-1" />
-                {course?.rating?.toFixed(1)}
-              </div>
-              <div className="flex items-center">
-                <BookOpen className="w-4 h-4 mr-1" />
-                {course._count.lessons} lessons
-              </div>
+              <p className="text-lg mb-2">Created by {course.instructor?.name}</p>
             </div>
-
-            <div className="prose dark:prose-invert max-w-none">
-              <h2 className="text-xl font-semibold">About this course</h2>
-              <p>{course.description}</p>
-
-              <h2 className="text-xl font-semibold">What you'll learn</h2>
-              <ul>
-                {course.learningObjectives.map((objective: string, index: number) => (
-                  <li key={index}>{objective}</li>
-                ))}
-              </ul>
-
-              <h2 className="text-xl font-semibold">Requirements</h2>
-              <ul>
-                {course.requirements.map((requirement: string, index: number) => (
-                  <li key={index}>{requirement}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Course Actions - Right Side */}
-          <div className="md:col-span-1">
-            <div className="sticky top-8 rounded-lg border p-6 space-y-6">
-              {course.imageUrl && (
+            <div className="relative">
+              <div className="aspect-video rounded-xl overflow-hidden shadow-xl bg-muted">
                 <img
-                  src={course.imageUrl}
+                  src={course.imageUrl || DEFAULT_COURSE_IMAGE}
                   alt={course.title}
-                  className="w-full rounded-lg"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = '/course-placeholder.jpg';
+                    if (target.src !== DEFAULT_COURSE_IMAGE) {
+                      target.src = DEFAULT_COURSE_IMAGE;
+                      target.onerror = null; // Prevent infinite loop
+                    }
                   }}
                 />
-              )}
-              
-              <CourseActions
-                courseId={course.id}
-                instructorId={course.instructor.id}
-                price={course.price}
-                isEnrolled={enrollmentStatus?.isEnrolled}
-              />
-
-              {/* Only show course includes section for students or non-owner instructors */}
-              {(user?.role === 'STUDENT' || (user?.role === 'INSTRUCTOR' && user.id !== course.instructor.id)) && (
-                <div className="text-sm text-muted-foreground">
-                  <h3 className="font-semibold mb-2">This course includes:</h3>
-                  <ul className="space-y-2">
-                    <li>• {course.duration} hours of video content</li>
-                    <li>• {course._count.lessons} lessons</li>
-                    <li>• Full lifetime access</li>
-                    <li>• Certificate of completion</li>
-                  </ul>
-                </div>
-              )}
+              </div>
+              <div className="absolute -bottom-6 left-6 right-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+                <CourseActions
+                  courseId={course.id}
+                  instructorId={course.instructor.id}
+                  price={course.price}
+                  isEnrolled={enrollmentStatus?.isEnrolled}
+                />
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  30-day money-back guarantee
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Course Content */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-12">
+            {/* Main Content */}
+            <div className="md:col-span-2 space-y-12">
+              {/* What You'll Learn */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6">What You'll Learn</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {learningObjectives.map((objective: string, index: number) => (
+                    <div key={index} className="flex gap-3">
+                      <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+                      <p className="text-muted-foreground">{objective}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Requirements */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Requirements</h2>
+                <ul className="space-y-2">
+                  {requirements.map((requirement: string, index: number) => (
+                    <li key={index} className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                      <span className="text-muted-foreground">{requirement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Course Content */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Course Content</h2>
+                <div className="space-y-4">
+                  {course.lessons?.sort((a: Lesson, b: Lesson) => a.order - b.order).map((lesson: Lesson) => (
+                    <div key={lesson.id} className="border rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedLessonId(expandedLessonId === lesson.id ? null : lesson.id)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-muted/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          {expandedLessonId === lesson.id ? (
+                            <ChevronDown className="h-5 w-5 transition-transform duration-200" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 transition-transform duration-200" />
+                          )}
+                          {lesson.type === 'VIDEO' && <Play className="h-5 w-5 text-green-600" />}
+                          {lesson.type === 'READING' && <BookOpen className="h-5 w-5 text-blue-600" />}
+                          {lesson.type === 'QUIZ' && <CheckCircle className="h-5 w-5 text-yellow-600" />}
+                          {lesson.type === 'ASSIGNMENT' && <Award className="h-5 w-5 text-purple-600" />}
+                          <span className="font-medium">{lesson.title}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-muted-foreground">
+                            {lesson.duration} min
+                          </span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                            {lesson.type.charAt(0) + lesson.type.slice(1).toLowerCase()}
+                          </span>
+                        </div>
+                      </button>
+                      
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                          expandedLessonId === lesson.id ? 'max-h-48' : 'max-h-0'
+                        }`}
+                      >
+                        <div className="p-4 bg-muted/30">
+                          <p className="text-sm text-muted-foreground">
+                            {lesson.description || `This is a ${lesson.type.toLowerCase()} lesson about ${lesson.title}.`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <div className="bg-card rounded-xl p-6 border">
+                <h3 className="font-semibold mb-4">This course includes:</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-muted-foreground">
+                    <Play className="h-5 w-5 text-green-600" />
+                    <span>{course.duration} hours of video content</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-muted-foreground">
+                    <BookOpen className="h-5 w-5 text-green-600" />
+                    <span>{course._count?.lessons || 0} lessons</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-muted-foreground">
+                    <Award className="h-5 w-5 text-green-600" />
+                    <span>Certificate of completion</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 } 
