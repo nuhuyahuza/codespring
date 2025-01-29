@@ -2,7 +2,6 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CourseActions } from '@/components/courses/CourseActions';
-import { Navigation } from '@/components/layout/Navigation';
 import { Button } from '@/components/ui';
 import { Clock, Users, Star, BookOpen, CheckCircle, Play, Award, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/features/auth';
@@ -225,7 +224,7 @@ export function CourseDetailPage() {
                       >
                         <div className="p-4 bg-muted/30">
                           <p className="text-sm text-muted-foreground">
-                            {lesson.description || `This is a ${lesson.type.toLowerCase()} lesson about ${lesson.title}.`}
+                            {lesson.description ?? `This is a ${lesson.type.toLowerCase()} lesson about ${lesson.title}.`}
                           </p>
                         </div>
                       </div>

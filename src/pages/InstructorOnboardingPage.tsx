@@ -18,23 +18,19 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  CardDescription
 } from '@/components/ui';
 import { useAuth } from '@/features/auth';
 import { Navigation } from '@/components/layout/Navigation';
+import { api } from '@/lib/api';
 
 const formSchema = z.object({
   expertise: z.array(z.string()).min(1, 'Select at least one area of expertise'),
   biography: z.string().min(100, 'Biography should be at least 100 characters'),
-  teachingExperience: z.string().min(2, 'Select your teaching experience'),
+  teachingExperience: z.string().min(1, 'Select your teaching experience'),
   linkedinProfile: z.string().url('Please enter a valid LinkedIn URL').optional(),
   websiteUrl: z.string().url('Please enter a valid website URL').optional(),
-  preferredLanguage: z.string().min(2, 'Select your preferred teaching language'),
+  preferredLanguage: z.string().min(1, 'Select your preferred teaching language'),
   qualifications: z.array(z.string()).min(1, 'Add at least one qualification'),
 });
 
@@ -52,21 +48,20 @@ const EXPERTISE_AREAS = [
   'Other'
 ];
 
-const TEACHING_EXPERIENCE = [
-  '0-1 years',
+const TEACHING_EXPERIENCE_OPTIONS = [
   '1-3 years',
   '3-5 years',
   '5-10 years',
   '10+ years'
 ];
 
-const LANGUAGES = [
+const LANGUAGE_OPTIONS = [
   'English',
   'Spanish',
   'French',
   'German',
   'Chinese',
-  'Arabic',
+  'Japanese',
   'Other'
 ];
 
@@ -79,43 +74,41 @@ export function InstructorOnboardingPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       expertise: [],
+      biography: '',
+      teachingExperience: '',
+      linkedinProfile: '',
+      websiteUrl: '',
+      preferredLanguage: '',
       qualifications: [],
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+	console.log("Hello");
+    console.log('Form validation state:', form.formState);
+    console.log('Form errors:', form.formState.errors);
+    
+    if (!form.formState.isValid) {
+      console.log('Form is invalid, validation errors:', form.formState.errors);
+      return;
+    }
+
     const toastId = toast.loading('Saving your instructor profile...');
     
     try {
       setIsSubmitting(true);
-      const token = sessionStorage.getItem('token');
+      console.log('Submitting values:', values);
+      await api.post('/instructors/onboarding', values);
       
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/instructor/onboarding`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save instructor profile');
-      }
-
       toast.success('Profile completed successfully!', {
         id: toastId,
         duration: 3000,
       });
-
-      navigate('/dashboard/instructor');
+      
+      navigate('/instructor/dashboard');
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error('Failed to save your information', {
+      toast.error('Failed to save your information. Please try again.', {
         id: toastId,
         duration: 3000,
       });
@@ -123,6 +116,10 @@ export function InstructorOnboardingPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleSub = () => {
+	console.log("Yo");
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,7 +135,7 @@ export function InstructorOnboardingPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleSub)} className="space-y-6">
                   <FormField
                     control={form.control}
                     name="expertise"
@@ -150,12 +147,13 @@ export function InstructorOnboardingPage() {
                             <Button
                               key={area}
                               type="button"
-                              variant={field.value.includes(area) ? "default" : "outline"}
+                              variant={field.value?.includes(area) ? "default" : "outline"}
                               size="sm"
                               onClick={() => {
-                                const newValue = field.value.includes(area)
-                                  ? field.value.filter((i) => i !== area)
-                                  : [...field.value, area];
+                                const currentValue = field.value || [];
+                                const newValue = currentValue.includes(area)
+                                  ? currentValue.filter((i) => i !== area)
+                                  : [...currentValue, area];
                                 field.onChange(newValue);
                               }}
                             >
@@ -192,20 +190,19 @@ export function InstructorOnboardingPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Teaching Experience</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your teaching experience" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {TEACHING_EXPERIENCE.map((exp) => (
-                              <SelectItem key={exp} value={exp}>
-                                {exp}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex flex-wrap gap-2">
+                          {TEACHING_EXPERIENCE_OPTIONS.map((exp) => (
+                            <Button
+                              key={exp}
+                              type="button"
+                              variant={field.value === exp ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => field.onChange(exp)}
+                            >
+                              {exp}
+                            </Button>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -247,20 +244,19 @@ export function InstructorOnboardingPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Preferred Teaching Language</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your preferred teaching language" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {LANGUAGES.map((lang) => (
-                              <SelectItem key={lang} value={lang}>
-                                {lang}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex flex-wrap gap-2">
+                          {LANGUAGE_OPTIONS.map((lang) => (
+                            <Button
+                              key={lang}
+                              type="button"
+                              variant={field.value === lang ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => field.onChange(lang)}
+                            >
+                              {lang}
+                            </Button>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -281,4 +277,4 @@ export function InstructorOnboardingPage() {
       </div>
     </div>
   );
-} 
+}
