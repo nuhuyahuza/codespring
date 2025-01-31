@@ -131,10 +131,14 @@ router.post('/', authenticateUser, async (req, res) => {
         liveSessionDetails,
         learningObjectives,
         requirements,
-        instructorId: req.user!.id,
         status: 'DRAFT',
         lastSavedStep: 'basics',
         updatedAt: new Date(),
+        instructor: {
+          connect: {
+            id: req.user!.id,
+          },
+        },
       },
     });
 

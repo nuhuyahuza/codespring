@@ -71,7 +71,7 @@ model Course {
   id                String          @id @default(uuid())
   title             String
   description       String          @db.Text
-  price             Float
+  price             Float?          @default(0)
   category          String          @default("other")
   level             String          @default("beginner")
   duration          Int             @default(0)  // Total duration in minutes

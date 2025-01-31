@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Course` MODIFY `price` DOUBLE NULL DEFAULT 0;
