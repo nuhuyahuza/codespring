@@ -12,6 +12,8 @@ import studentRoutes from './routes/student';
 import instructorRoutes from './routes/instructors';
 import { setupChatServer } from './websocket/chat';
 import certificatesRoutes from './routes/certificates';
+import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -31,11 +33,21 @@ const prisma = new PrismaClient();
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
-app.use('/uploads', express.static('uploads'));
+const __dirname = process.cwd();
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads/course-thumbnails');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Health Check Route
 app.get('/api/health', (req, res) => {

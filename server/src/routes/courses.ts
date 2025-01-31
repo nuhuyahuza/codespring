@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
 import crypto from 'crypto';
+import { upload } from '../middleware/upload';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -102,28 +103,45 @@ router.get('/:id', async (req, res) => {
 // Create a course
 router.post('/', authenticateUser, async (req, res) => {
   try {
-    const { title, description, price } = req.body;
+    const {
+      title,
+      description,
+      category,
+      level,
+      price,
+      language,
+      tags,
+      isLiveEnabled,
+      liveSessionDetails,
+      learningObjectives,
+      requirements,
+    } = req.body;
+
     const course = await prisma.course.create({
       data: {
         id: crypto.randomUUID(),
         title,
         description,
-        price: parseFloat(price),
+        category,
+        level,
+        price: Number(price),
+        language,
+        tags,
+        isLiveEnabled: Boolean(isLiveEnabled),
+        liveSessionDetails,
+        learningObjectives,
+        requirements,
         instructorId: req.user!.id,
+        status: 'DRAFT',
+        lastSavedStep: 'basics',
         updatedAt: new Date(),
       },
-      include: {
-        instructor: {
-          select: {
-            name: true,
-          },
-        },
-      },
     });
+
     res.status(201).json(course);
   } catch (error) {
     console.error('Error creating course:', error);
-    res.status(500).json({ error: 'Failed to create course' });
+    res.status(500).json({ error: 'Failed to create course' + error });
   }
 });
 
@@ -555,6 +573,179 @@ router.post('/:courseId/lessons/:lessonId/progress', authenticateUser, async (re
   } catch (error) {
     console.error('Error updating lesson progress:', error);
     res.status(500).json({ error: 'Failed to update lesson progress' });
+  }
+});
+
+// Add thumbnail to course
+router.post('/:id/thumbnail', 
+  authenticateUser, 
+  upload.single('thumbnail') as unknown as express.RequestHandler,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const course = await prisma.course.findFirst({
+        where: {
+          id,
+          instructorId: req.user!.id,
+        },
+      });
+
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found or unauthorized' });
+      }
+
+      // Generate the URL for the uploaded file
+      const imageUrl = `/uploads/course-thumbnails/${file.filename}`;
+
+      const updatedCourse = await prisma.course.update({
+        where: { id },
+        data: {
+          imageUrl,
+          updatedAt: new Date(),
+        },
+      });
+
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error);
+      res.status(500).json({ error: 'Failed to upload thumbnail' });
+    }
+  }
+);
+
+// Add section to course
+router.post('/:courseId/sections', authenticateUser, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { title, description } = req.body;
+
+    // Verify course ownership
+    const course = await prisma.course.findFirst({
+      where: {
+        id: courseId,
+        instructorId: req.user!.id,
+      },
+      include: {
+        sections: true,
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const section = await prisma.section.create({
+      data: {
+        title,
+        description,
+        order: course.sections.length,
+        courseId,
+      },
+    });
+
+    res.status(201).json(section);
+  } catch (error) {
+    console.error('Error creating section:', error);
+    res.status(500).json({ error: 'Failed to create section' });
+  }
+});
+
+// Add lesson to section
+router.post('/:courseId/sections/:sectionId/lessons', authenticateUser, async (req, res) => {
+  try {
+    const { courseId, sectionId } = req.params;
+    const {
+      title,
+      description,
+      type,
+      content,
+      videoUrl,
+      duration,
+      isPreview,
+      attachments,
+      quizData,
+      completionCriteria,
+    } = req.body;
+
+    // Verify course ownership
+    const course = await prisma.course.findFirst({
+      where: {
+        id: courseId,
+        instructorId: req.user!.id,
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Get current section's lesson count for ordering
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      include: { lessons: true },
+    });
+
+    if (!section) {
+      return res.status(404).json({ error: 'Section not found' });
+    }
+
+    const lesson = await prisma.lesson.create({
+      data: {
+        title,
+        description,
+        type,
+        content,
+        videoUrl,
+        duration,
+        isPreview,
+        attachments,
+        quizData,
+        completionCriteria,
+        order: section.lessons.length,
+        courseId,
+        sectionId,
+      },
+    });
+
+    res.status(201).json(lesson);
+  } catch (error) {
+    console.error('Error creating lesson:', error);
+    res.status(500).json({ error: 'Failed to create lesson' });
+  }
+});
+
+// Update course status
+router.patch('/:courseId/status', authenticateUser, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { status } = req.body;
+
+    const course = await prisma.course.findFirst({
+      where: {
+        id: courseId,
+        instructorId: req.user!.id,
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const updatedCourse = await prisma.course.update({
+      where: { id: courseId },
+      data: { status },
+    });
+
+    res.json(updatedCourse);
+  } catch (error) {
+    console.error('Error updating course status:', error);
+    res.status(500).json({ error: 'Failed to update course status' });
   }
 });
 
