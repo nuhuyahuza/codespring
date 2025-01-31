@@ -85,10 +85,11 @@ model Course {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   lastSavedStep     String?         // Track wizard progress
+  completedSteps    Json?          // Array of completed steps
   isLiveEnabled     Boolean         @default(false)
   liveSessionDetails Json?          // Store live session configuration
   language          String          @default("English")
-  tags              String?         @db.Text     // Made optional
+  tags              String?         @db.Text
   completionCriteria Json?          // Define what constitutes course completion
 
   // Relations
