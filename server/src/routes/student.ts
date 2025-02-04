@@ -29,12 +29,12 @@ router.get('/', authenticateUser, async (req, res) => {
         status: 'active',
       },
       include: {
-        Course: {
+        course: {
           include: {
-            User: true, // This gets the instructor details
-            Lesson: {
+            instructor: true,
+            lessons: {
               include: {
-                LessonProgress: {
+                progress: {
                   where: {
                     userId,
                   }
@@ -52,14 +52,14 @@ router.get('/', authenticateUser, async (req, res) => {
 
     // Transform to match client expected format
     const enrolledCourses = enrollments.map(enrollment => {
-      const totalLessons = enrollment.Course.Lesson.length;
-      const completedLessons = enrollment.Course.Lesson.filter(
-        lesson => lesson.LessonProgress.some(progress => progress.completed)
+      const totalLessons = enrollment.course.lessons.length;
+      const completedLessons = enrollment.course.lessons.filter(
+        lesson => lesson.progress.some(progress => progress.completed)
       ).length;
 
       const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-      console.log(`\n📖 Processing course: ${enrollment.Course.title}`);
+      console.log(`\n📖 Processing course: ${enrollment.course.title}`);
       console.log({
         totalLessons,
         completedLessons,
@@ -67,12 +67,12 @@ router.get('/', authenticateUser, async (req, res) => {
       });
 
       return {
-        id: enrollment.Course.id,
-        title: enrollment.Course.title,
-        thumbnail: enrollment.Course.imageUrl,
+        id: enrollment.course.id,
+        title: enrollment.course.title,
+        thumbnail: enrollment.course.imageUrl,
         progress,
         instructor: {
-          name: enrollment.Course.User.name,
+          name: enrollment.course.instructor.name,
         },
       };
     });

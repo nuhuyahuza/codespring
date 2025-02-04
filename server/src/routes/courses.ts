@@ -8,31 +8,6 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Type definitions
-type CourseWithProgress = Prisma.CourseGetPayload<{
-  include: {
-    instructor: {
-      select: {
-        id: true;
-        name: true;
-      };
-    };
-    lessons: {
-      include: {
-        LessonProgress: {
-          where: {
-            userId: string;
-          };
-        };
-      };
-    };
-    enrollments: {
-      where: {
-        userId: string;
-      };
-    };
-  };
-}>;
-
 // Get all courses with optional featured filter
 router.get('/', async (req, res) => {
   try {
@@ -249,7 +224,7 @@ router.get('/:id/content', async (req, res) => {
             order: 'asc',
           },
           include: {
-            LessonProgress: userId ? {
+            progress: userId ? {
               where: {
                 userId,
               },
@@ -279,8 +254,8 @@ router.get('/:id/content', async (req, res) => {
       ...(isEnrolled || isInstructor ? {
         content: lesson.content,
         videoUrl: lesson.videoUrl,
-        completed: lesson.LessonProgress?.[0]?.completed ?? false,
-        timeSpent: lesson.LessonProgress?.[0]?.timeSpent ?? 0,
+        completed: lesson.progress?.[0]?.completed ?? false,
+        timeSpent: lesson.progress?.[0]?.timeSpent ?? 0,
       } : {}),
     }));
 
@@ -307,7 +282,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       include: {
         lessons: {
           include: {
-            LessonProgress: {
+            progress: {
               where: {
                 userId: req.user!.id,
               },
@@ -331,7 +306,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
     }
 
     const completedLessons = course.lessons
-      .filter(lesson => lesson.LessonProgress.length > 0 && lesson.LessonProgress[0].completed)
+      .filter(lesson => lesson.progress.length > 0 && lesson.progress[0].completed)
       .map(lesson => lesson.id);
 
     const totalProgress = course.lessons.length > 0
@@ -339,7 +314,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       : 0;
 
     const totalTimeSpent = course.lessons.reduce(
-      (total, lesson) => total + (lesson.LessonProgress[0]?.timeSpent || 0),
+      (total, lesson) => total + (lesson.progress[0]?.timeSpent || 0),
       0
     );
 
@@ -347,7 +322,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
       completedLessons,
       totalProgress,
       totalTimeSpent,
-      currentLesson: course.lessons.find(lesson => !lesson.LessonProgress[0]?.completed)?.id || null,
+      currentLesson: course.lessons.find(lesson => !lesson.progress[0]?.completed)?.id || null,
     });
   } catch (error) {
     console.error('Error fetching course progress:', error);
@@ -481,7 +456,7 @@ router.get('/:id/learn', authenticateUser, async (req, res) => {
             order: 'asc',
           },
           include: {
-            LessonProgress: {
+            progress: {
               where: {
                 userId,
               },
@@ -727,7 +702,6 @@ router.post('/:courseId/sections/:sectionId/lessons', authenticateUser, async (r
         duration,
         isPreview,
         attachments,
-        quizData,
         completionCriteria,
         order: section.lessons.length,
         courseId,
