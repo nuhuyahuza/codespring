@@ -43,7 +43,7 @@ export function useEditCourse(courseId: string) {
   const fetchCourse = async () => {
     try {
       const response = await api.get<Course>(`/api/instructor/courses/${courseId}`);
-      setCourse(response.data);
+      setCourse(response);
       setError(null);
     } catch (err) {
       console.error('Error fetching course:', err);
@@ -59,7 +59,7 @@ export function useEditCourse(courseId: string) {
         `/api/instructor/courses/${courseId}`,
         data
       );
-      setCourse(response.data);
+      setCourse(response);
       setError(null);
     } catch (err) {
       console.error('Error updating course:', err);
@@ -81,7 +81,7 @@ export function useEditCourse(courseId: string) {
         if (!prev) return prev;
         return {
           ...prev,
-          sections: [...prev.sections, response.data],
+          sections: [...prev.sections, response],
         };
       });
       setError(null);
@@ -103,7 +103,7 @@ export function useEditCourse(courseId: string) {
         return {
           ...prev,
           sections: prev.sections.map((section) =>
-            section.id === sectionId ? response.data : section
+            section.id === sectionId ? response : section
           ),
         };
       });
@@ -151,7 +151,7 @@ export function useEditCourse(courseId: string) {
             section.id === sectionId
               ? {
                   ...section,
-                  lessons: [...section.lessons, response.data],
+                  lessons: [...section.lessons, response],
                 }
               : section
           ),
@@ -184,7 +184,7 @@ export function useEditCourse(courseId: string) {
               ? {
                   ...section,
                   lessons: section.lessons.map((lesson) =>
-                    lesson.id === lessonId ? response.data : lesson
+                    lesson.id === lessonId ? response : lesson
                   ),
                 }
               : section
@@ -233,7 +233,7 @@ export function useEditCourse(courseId: string) {
       const response = await api.post<Course>(
         `/api/instructor/courses/${courseId}/publish`
       );
-      setCourse(response.data);
+      setCourse(response);
       setError(null);
     } catch (err) {
       console.error('Error publishing course:', err);

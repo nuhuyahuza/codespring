@@ -48,11 +48,11 @@ export function CourseCard({ course, onEnroll }: CourseCardProps) {
           {course.description}
         </p>
         <div className="flex flex-wrap gap-2 mt-4">
-          {course.tags.map((tag) => (
+          {Array.isArray(course.tags) ? course.tags.map((tag) => (
             <Badge key={tag} variant="outline">
               {tag}
             </Badge>
-          ))}
+          )) : null}
         </div>
       </CardContent>
       <CardFooter className="mt-auto">

@@ -40,7 +40,7 @@ export function CourseCard({ course }: CourseCardProps) {
               By {course.instructor.name}
             </span>
             <span className="font-semibold text-primary">
-              ${course.price.toFixed(2)}
+              ${course.price ? course.price.toFixed(2) : 0.00}
             </span>
           </div>
         </div>

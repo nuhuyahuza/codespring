@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Table,
@@ -19,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import {
   MoreVertical,
   Plus,
-  Search,
   Edit,
   Trash,
   Users,
@@ -28,7 +28,6 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/utils';
-import { CreateCourseDialog } from './CreateCourseDialog';
 
 interface Course {
   id: string;
@@ -48,12 +47,16 @@ interface Course {
 
 export function CourseManagement() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ['instructor-courses'],
-    queryFn: () => api.get('/api/instructor/courses', token),
+    queryFn: () => api.get('/courses', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }),
   });
 
   const filteredCourses = courses?.filter(course =>
@@ -61,7 +64,18 @@ export function CourseManagement() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">My Courses</h2>
+        <Button 
+          onClick={() => navigate('/dashboard/courses/create')}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Course
+        </Button>
+      </div>
+
       <div className="flex justify-between">
         <div className="flex gap-2">
           <Input
@@ -69,23 +83,19 @@ export function CourseManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-[300px]"
-            icon={<Search className="h-4 w-4" />}
           />
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Course
-        </Button>
       </div>
 
-      <div className="rounded-md border">
+      {/* Course Table */}
+      <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Level</TableHead>
-              <TableHead className="text-right">Price</TableHead>
+              <TableHead>Price</TableHead>
               <TableHead className="text-center">Students</TableHead>
               <TableHead className="text-center">Lessons</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -110,9 +120,7 @@ export function CourseManagement() {
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>{course.category}</TableCell>
                   <TableCell>{course.level}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(course.price)}
-                  </TableCell>
+                  <TableCell>{formatCurrency(course.price)}</TableCell>
                   <TableCell className="text-center">
                     {course._count.enrollments}
                   </TableCell>
@@ -128,19 +136,19 @@ export function CourseManagement() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => window.location.href = `/courses/${course.id}/edit`}
+                          onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Course
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => window.location.href = `/courses/${course.id}/lessons`}
+                          onClick={() => navigate(`/dashboard/courses/${course.id}/lessons`)}
                         >
                           <BookOpen className="h-4 w-4 mr-2" />
                           Manage Lessons
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => window.location.href = `/courses/${course.id}/students`}
+                          onClick={() => navigate(`/dashboard/courses/${course.id}/students`)}
                         >
                           <Users className="h-4 w-4 mr-2" />
                           View Students
@@ -158,11 +166,6 @@ export function CourseManagement() {
           </TableBody>
         </Table>
       </div>
-
-      <CreateCourseDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-      />
     </div>
   );
 } 

@@ -22,3 +22,9 @@ yarn db:seed
 # Start the application
 echo "Starting the application..."
 yarn start 
+
+
+# npx prisma migrate dev --name add_lesson_content_fields
+# npx prisma generate
+# npx prisma migrate deploy
+# npx prisma db seed

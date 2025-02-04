@@ -12,7 +12,6 @@ import { SignUpPage } from '@/pages/SignUpPage';
 import { UserOnboardingPage } from '@/pages/UserOnboardingPage';
 import { DashboardRedirect } from '@/pages/DashboardRedirect';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { CoursesPage } from '@/pages/courses';
 import { CourseDetailsPage } from '@/pages/courses/CourseDetailsPage';
 import { InstructorsPage } from '@/pages/InstructorsPage';
 import { AboutPage } from '@/pages/AboutPage';
@@ -25,6 +24,8 @@ import { CertificatesPage } from '@/pages/student/CertificatesPage';
 import { StudentCoursesPage } from '@/pages/student/StudentCoursesPage';
 import { CourseLearnPage } from '@/pages/student/CourseLearnPage';
 import { CourseDetailPage } from '@/pages/CourseDetailPage';
+import { CourseCreationPage } from '@/pages/instructor/CourseCreationPage';
+import { CoursesPage } from './pages/CoursesPage';
 
 function App() {
   const { isAuthenticated, token } = useAuth();
@@ -85,6 +86,24 @@ function App() {
                 </Routes>
               </ProtectedRoute>
             }
+          />
+
+          {/* Instructor Routes */}
+          <Route 
+            path="/dashboard/courses/create" 
+            element={
+              <ProtectedRoute>
+                <CourseCreationPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/courses/:courseId/edit" 
+            element={
+              <ProtectedRoute>
+                <CourseCreationPage />
+              </ProtectedRoute>
+            } 
           />
 
           {/* Student Dashboard Routes */}

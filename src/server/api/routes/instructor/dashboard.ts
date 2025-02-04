@@ -1,14 +1,14 @@
 import { Request, Response, Router } from 'express';
 import { prisma } from '@/lib/prisma';
-import { authenticateUser } from '@/lib/auth-middleware';
 import { calculateProgress } from '@/server/utils/progress';
 import type { Course, Enrollment, LiveSession, Review, User } from '@prisma/client';
+import { authenticateUser } from '@/server/middleware/auth';
 
 const router = Router();
 
 router.get('/api/instructor/dashboard', authenticateUser, async (req: Request, res: Response) => {
   try {
-    const instructorId = req.user.id;
+    const instructorId = req.user?.id;
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const sevenDaysFromNow = new Date(today);

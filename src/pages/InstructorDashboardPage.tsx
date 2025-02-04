@@ -178,13 +178,6 @@ export function InstructorDashboardPage() {
               <TabsContent value="courses">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Your Courses</h2>
-                  <Button
-                    onClick={() => setShowCreateModal(true)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    Create New Course
-                  </Button>
                 </div>
                 <CourseManagement />
                 <CreateCourseModal

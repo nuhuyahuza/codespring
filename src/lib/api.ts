@@ -73,24 +73,47 @@ interface RequestConfig {
   withCredentials?: boolean;
 }
 
+interface ApiResponse<T = any> {
+  data: T;
+}
+
 export const api = {
-  get: async (endpoint: string, config?: RequestConfig) => {
-    const response = await axiosInstance.get(endpoint, config);
-    return response.data;
+  get: async <T>(url: string, config?: any): Promise<T> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, config);
+    if (!response.ok) throw new Error('API Error');
+    return response.json();
   },
-
-  post: async (endpoint: string, data: any, config?: RequestConfig) => {
-    const response = await axiosInstance.post(endpoint, data, config);
-    return response.data;
+  post: async <T>(url: string, data?: any, config?: any): Promise<T> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      },
+      body: JSON.stringify(data),
+      ...config,
+    });
+    if (!response.ok) throw new Error('API Error');
+    return response.json();
   },
-
-  put: async (endpoint: string, data: any, config?: RequestConfig) => {
-    const response = await axiosInstance.put(endpoint, data, config);
-    return response.data;
+  put: async <T>(url: string, data?: any, config?: any): Promise<T> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      },
+      body: JSON.stringify(data),
+      ...config,
+    });
+    if (!response.ok) throw new Error('API Error');
+    return response.json();
   },
-
-  delete: async (endpoint: string, config?: RequestConfig) => {
-    const response = await axiosInstance.delete(endpoint, config);
-    return response.data;
+  delete: async (url: string, config?: any): Promise<void> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      method: 'DELETE',
+      ...config,
+    });
+    if (!response.ok) throw new Error('API Error');
   },
 }; 

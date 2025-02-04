@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,14 +25,15 @@ import {
   SelectValue,
 } from '@/components/ui';
 import { toast } from 'sonner';
+import { useAuth } from '@/features/auth';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(100, 'Description must be at least 100 characters'),
   category: z.string().min(2, 'Please select a category'),
   level: z.string().min(2, 'Please select a difficulty level'),
-  price: z.number().min(0, 'Price must be 0 or greater'),
-  thumbnail: z.instanceof(File).optional(),
+  price: z.coerce.number().min(0, 'Price must be 0 or greater'),
+  thumbnail: z.any().optional(),
 });
 
 const CATEGORIES = [
@@ -60,6 +62,8 @@ interface CreateCourseModalProps {
 
 export function CreateCourseModal({ isOpen, onClose, onSuccess }: CreateCourseModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { token } = useAuth();
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,31 +77,53 @@ export function CreateCourseModal({ isOpen, onClose, onSuccess }: CreateCourseMo
     
     try {
       setIsSubmitting(true);
-      const token = sessionStorage.getItem('token');
       
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      const formData = new FormData();
-      Object.entries(values).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else {
-          formData.append(key, String(value));
-        }
-      });
+      const courseData = {
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        level: values.level,
+        price: Number(values.price),
+      };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/courses`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify(courseData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create course');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create course');
+      }
+
+      const course = await response.json();
+
+      if (values.thumbnail instanceof File) {
+        const formData = new FormData();
+        formData.append('thumbnail', values.thumbnail);
+
+        const thumbnailResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/courses/${course.id}/thumbnail`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!thumbnailResponse.ok) {
+          console.error('Failed to upload thumbnail');
+        }
       }
 
       toast.success('Course created successfully!', {
@@ -105,11 +131,13 @@ export function CreateCourseModal({ isOpen, onClose, onSuccess }: CreateCourseMo
         duration: 3000,
       });
 
+      // Navigate to course edit page
+    navigate(`/dashboard/courses/${course.id}/edit`);
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Error creating course:', error);
-      toast.error('Failed to create course', {
+      toast.error(error instanceof Error ? error.message : 'Failed to create course', {
         id: toastId,
         duration: 3000,
       });

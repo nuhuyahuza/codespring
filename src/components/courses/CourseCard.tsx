@@ -7,7 +7,7 @@ interface CourseCardProps {
     id: string;
     title: string;
     description: string;
-    price: number;
+    price?: number;
     imageUrl?: string;
     instructor: {
       id: string;
@@ -24,7 +24,7 @@ export function CourseCard({ course }: CourseCardProps) {
   const { data: enrollmentStatus } = useQuery({
     queryKey: ['enrollmentStatus', course.id],
     queryFn: async () => {
-      const response = await api.get(`/student/courses/${course.id}/enrollment-status`);
+      const response = await api.get(`/student/courses/${course.id}/enrollment-status`) as { data: { isEnrolled: boolean } };
       return response.data;
     },
     // Only fetch if user is authenticated (handled by api interceptor)
@@ -62,7 +62,7 @@ export function CourseCard({ course }: CourseCardProps) {
           <CourseActions
             courseId={course.id}
             instructorId={course.instructor.id}
-            price={course.price}
+            price={course.price || 0}
             isEnrolled={enrollmentStatus?.isEnrolled}
           />
         </div>
