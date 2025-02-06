@@ -2,12 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
-import { VideoPlayer } from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { 
-  Loader2, Lock, CheckCircle, PlayCircle, X, Menu, ChevronLeft,
-  Home, BookOpen, Users, Award, Settings, LogOut
+  Loader2, Menu, ChevronLeft,
+  Home, BookOpen, Users, Award, Settings, LogOut, Code2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -16,6 +14,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CourseSidebar } from '@/components/course/CourseSidebar';
+import { ReadingLesson } from '@/components/course/ReadingLesson';
+import { VideoLesson } from '@/components/course/VideoLesson';
+import { CodeEditor } from '@/components/course/CodeEditor';
 
 interface Course {
   id: string;
@@ -47,7 +49,10 @@ interface Course {
       completed: boolean;
       timeSpent: number;
     }[];
+    type: 'video' | 'reading';
   }[];
+  type: 'programming' | 'general';
+  programmingLanguage?: string;
 }
 
 export function CourseLearnPage() {
@@ -59,6 +64,7 @@ export function CourseLearnPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
 
   const fetchCourse = useCallback(async () => {
     if (!courseId || !token) throw new Error('Missing courseId or token');
@@ -228,6 +234,31 @@ export function CourseLearnPage() {
     };
   }, [isSidebarOpen]);
 
+  // Render lesson content based on type
+  const renderLessonContent = (lesson: Course['lessons'][0]) => {
+    if (lesson.type === 'video' && lesson.videoUrl) {
+      return (
+        <VideoLesson
+          title={lesson.title}
+          content={lesson.content}
+          lessonNumber={currentLessonIndex + 1}
+          totalLessons={course?.lessons?.length || 0}
+          videoUrl={lesson.videoUrl}
+          isFullscreen={isFullscreen}
+          onFullscreenChange={setIsFullscreen}
+        />
+      );
+    } else {
+      return <ReadingLesson content={lesson.content} />;
+    }
+  };
+
+  const isProgrammingCourse = (course: Course) => {
+    return course.type === 'programming' || 
+           course.category.toLowerCase().includes('programming') ||
+           course.category.toLowerCase().includes('development');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -372,126 +403,54 @@ export function CourseLearnPage() {
 
           {/* Course Content Layout */}
           <div className="flex h-[calc(100vh-4rem)] md:h-screen">
-            {/* Course Sidebar */}
-            <div>
-              {isSidebarOpen && (
-                <div 
-                  className="fixed inset-0 bg-black/20 z-40 md:hidden"
-                  onClick={() => setIsSidebarOpen(false)}
-                />
-              )}
-              
-              <div
-                ref={sidebarRef}
-                className={`
-                  fixed md:sticky top-0 h-full z-50 w-full md:w-80
-                  transform transition-transform duration-200 ease-in-out
-                  bg-background border-r overflow-y-auto
-                  ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                `}
-              >
-                <div className="p-6">
-                  {/* Mobile Close Button */}
-                  <div className="flex justify-between items-center md:hidden mb-4">
-                    <h2 className="text-xl font-bold">Course Content</h2>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setIsSidebarOpen(false)}
-                      className="hover:bg-muted"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
+            <CourseSidebar
+              course={course}
+              currentLessonId={currentLessonId || ''}
+              isSidebarOpen={isSidebarOpen}
+              setIsSidebarOpen={setIsSidebarOpen}
+              onLessonSelect={handleLessonSelect}
+              progressPercentage={progressPercentage}
+            />
 
-                  {/* Desktop Title */}
-                  <h2 className="text-2xl font-bold mb-4 hidden md:block">{course.title}</h2>
-                  
-                  {/* Rest of sidebar content */}
-                  <div className="mb-6">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Course Progress</span>
-                      <span>{progressPercentage}%</span>
-                    </div>
-                    <Progress value={progressPercentage} className="h-2" />
-                  </div>
-                  <div className="space-y-2">
-                    {course.lessons?.map((lesson, index) => {
-                      const isCompleted = lesson.progress?.[0]?.completed;
-                      const isCurrent = lesson.id === currentLessonId;
-                      const isLocked = !course.lessons
-                        .slice(0, index)
-                        .every((l) => l.progress?.[0]?.completed);
-
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => {
-                            handleLessonSelect(lesson.id, index);
-                            setIsSidebarOpen(false); // Close sidebar on mobile after selection
-                          }}
-                          disabled={isLocked && !isCompleted}
-                          className={`w-full p-3 rounded-lg text-left flex items-center gap-3 transition-colors ${
-                            isCurrent
-                              ? 'bg-primary text-primary-foreground'
-                              : isCompleted
-                              ? 'bg-muted/50 hover:bg-muted'
-                              : isLocked
-                              ? 'bg-muted/30 cursor-not-allowed opacity-50'
-                              : 'hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className="flex-shrink-0">
-                            {isCompleted ? (
-                              <CheckCircle className="h-5 w-5" />
-                            ) : isLocked ? (
-                              <Lock className="h-5 w-5" />
-                            ) : (
-                              <PlayCircle className="h-5 w-5" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">{lesson.title}</div>
-                            <div className="text-xs opacity-70">Lesson {index + 1}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Main Content Area - Updated layout */}
+            {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto">
                 <div className="container max-w-4xl mx-auto px-4 py-6">
                   {currentLesson && (
                     <div className="p-4 md:p-6 max-w-4xl mx-auto">
                       <div className="mb-4 md:mb-6">
-                        <h3 className="text-xl md:text-2xl font-bold mb-2">{currentLesson.title}</h3>
+                        <h3 className="text-xl md:text-2xl font-bold mb-2">
+                          {currentLesson.title}
+                        </h3>
                         <p className="text-muted-foreground">
                           Lesson {currentLessonIndex + 1} of {totalLessons}
                         </p>
                       </div>
 
-                      {currentLesson.videoUrl && (
-                        <div className="mb-4 md:mb-6">
-                          <div className="relative aspect-video">
-                            <VideoPlayer
-                              url={currentLesson.videoUrl}
-                              isFullscreen={isFullscreen}
-                              onFullscreenChange={setIsFullscreen}
+                      {renderLessonContent(currentLesson)}
+
+                      {isProgrammingCourse(course) && (
+                        <div className="mt-6">
+                          <Button
+                            variant="outline"
+                            className="mb-4"
+                            onClick={() => setShowCodeEditor(!showCodeEditor)}
+                          >
+                            <Code2 className="mr-2 h-4 w-4" />
+                            {showCodeEditor ? 'Hide Code Editor' : 'Show Code Editor'}
+                          </Button>
+                          
+                          {showCodeEditor && (
+                            <CodeEditor
+                              defaultLanguage={course.programmingLanguage || 'javascript'}
+                              className="mt-4"
                             />
-                          </div>
+                          )}
                         </div>
                       )}
 
-                      <div className="prose dark:prose-invert max-w-none mb-6 text-sm md:text-base">
-                        {currentLesson.content}
-                      </div>
-
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center">
+                      {/* Navigation buttons */}
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center mt-6">
                         <Button
                           variant="outline"
                           className="w-full md:w-auto"
