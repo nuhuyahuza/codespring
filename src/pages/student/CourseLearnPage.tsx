@@ -249,7 +249,18 @@ export function CourseLearnPage() {
         />
       );
     } else {
-      return <ReadingLesson content={lesson.content} />;
+      return (
+        <ReadingLesson 
+          title={lesson.title}
+          content={lesson.content}
+          estimatedTime={lesson.duration || 5}
+          objectives={[
+            "Understand the core concepts covered in this lesson",
+            "Apply the knowledge through practical examples",
+            "Master the techniques discussed"
+          ]}
+        />
+      );
     }
   };
 
