@@ -278,7 +278,7 @@ export function useCourseCreation(courseId?: string) {
 
     setIsLoading(true);
     try {
-      await api.put(`/courses/${courseId}/status`, 
+      await api.patch(`/courses/${courseId}/status`, 
         { status: 'PUBLISHED' },
         { 
           headers: {

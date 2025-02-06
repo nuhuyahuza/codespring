@@ -728,7 +728,7 @@ router.patch('/:courseId/status', authenticateUser, async (req, res) => {
 
 
 
-router.post('/onboarding/:id/:step', authenticateUser, async(req,res) => {
+router.post('/:id/:step', authenticateUser, async(req,res) => {
   try {
     const { id, step } = req.params;
 

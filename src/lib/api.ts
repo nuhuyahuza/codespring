@@ -109,6 +109,19 @@ export const api = {
     if (!response.ok) throw new Error('API Error');
     return response.json();
   },
+  patch: async <T>(url: string, data?: any, config?: any): Promise<T> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      },
+      body: JSON.stringify(data),
+      ...config,
+    });
+    if (!response.ok) throw new Error('API Error');
+    return response.json();
+  },
   delete: async (url: string, config?: any): Promise<void> => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
       method: 'DELETE',
