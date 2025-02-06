@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,31 +32,17 @@ interface CodeEditorProps {
   className?: string;
 }
 
-const SAMPLE_CODE = {
-  javascript: `// Example: Simple function to find factorial
-function factorial(n) {
-  if (n === 0 || n === 1) return 1;
-  return n * factorial(n - 1);
-}
-
-// Test the function
-const number = 5;
-const result = factorial(number);
-console.log(\`Factorial of \${number} is: \${result}\`);
-
-// Example: Array manipulation
-const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(n => n * 2);
-console.log('Doubled numbers:', doubled);
-
-// Example: Object manipulation
-const person = {
-  name: 'John',
-  age: 30
-};
-console.log('Person:', person);`,
-  python: `# Python sample code will go here`,
-  // ... other language samples
+const SAMPLE_CODE: Record<SupportedLanguage, string> = {
+  javascript: `// JavaScript code...`,
+  typescript: `// TypeScript code...`,
+  python: `# Python code...`,
+  java: `// Java code...`,
+  cpp: `// C++ code...`,
+  csharp: `// C# code...`,
+  php: `<?php\n// PHP code...\n?>`,
+  ruby: `# Ruby code...`,
+  go: `// Go code...`,
+  rust: `// Rust code...`
 };
 
 export function CodeEditor({ 
@@ -69,29 +55,40 @@ export function CodeEditor({
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string>('');
 
+  useEffect(() => {
+    setCode(SAMPLE_CODE[language] || SAMPLE_CODE.javascript);
+  }, [language]);
+
   const handleRunCode = async () => {
     setIsRunning(true);
     try {
-      // Create a new function from the code and capture console.log outputs
-      const logs: string[] = [];
-      const originalConsoleLog = console.log;
-      console.log = (...args) => {
-        logs.push(args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' '));
-      };
+      if (language === 'javascript') {
+        const logs: string[] = [];
+        const originalConsoleLog = console.log;
+        console.log = (...args) => {
+          logs.push(args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+          ).join(' '));
+        };
 
-      try {
-        // For JavaScript, we can use Function constructor to run the code
-        if (language === 'javascript') {
+        try {
           const fn = new Function(code);
           await fn();
+          setOutput(logs.join('\n'));
+        } finally {
+          console.log = originalConsoleLog;
         }
-        // Add handlers for other languages here
-        
-        setOutput(logs.join('\n'));
-      } finally {
-        console.log = originalConsoleLog;
+      } else {
+        setOutput(
+          `Note: ${SUPPORTED_LANGUAGES[language]} code execution is not supported in the browser.\n\n` +
+          `To run this code, you would need:\n` +
+          `1. A ${SUPPORTED_LANGUAGES[language]} interpreter/compiler\n` +
+          `2. Proper backend setup for code execution\n` +
+          `3. Security measures for safe code execution\n\n` +
+          `This is your ${SUPPORTED_LANGUAGES[language]} code:\n` +
+          `----------------------------------------\n` +
+          code
+        );
       }
     } catch (error) {
       setOutput(`Error: ${error instanceof Error ? error.message : String(error)}`);
