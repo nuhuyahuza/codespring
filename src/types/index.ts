@@ -32,8 +32,13 @@ export interface Course {
   instructor: string;
   thumbnail: string | null;
   progress: number;
+  tags: string[];
+  description?: string;
+  price?: number;
+  duration?: number;
+  difficulty?: string; 
   status: 'in-progress' | 'completed';
-  lastAccessedAt: string;
+  lastAccessedAt?: string;
 }
 
 export interface LiveClass {

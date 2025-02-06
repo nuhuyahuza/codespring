@@ -12,4 +12,12 @@ export interface Course {
     lessons: number;
   };
   lessonPreviews: string[];
+  learningObjectives: string[];
+  courseContent: string[];
+  requirements: string[];
+  rating: number;
+  level: string;
+  duration: number;
+  imageUrl: string;
+  lessons: []
 }

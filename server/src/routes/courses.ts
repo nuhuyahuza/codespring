@@ -124,24 +124,6 @@ router.post('/', authenticateUser, async (req, res) => {
   }
 });
 
-router.post('/:id/:step', authenticateUser, async(req,res) => {
-  try {
-    const { id, step } = req.params;
-
-    const course = await prisma.course.update({
-      where: { id },
-      data: {
-        ...req.body,
-        lastSavedStep: step,
-
-      },
-    });
-    res.status(201).json(course);
-  } catch (error) {
-    console.error('Error creating course:', error);
-    res.status(500).json({ error: 'Failed to create course' + error });
-  }
-});
 // Update a course
 router.put('/:id', authenticateUser, async (req, res) => {
   try {
@@ -384,7 +366,7 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
       )
     );
 
-    res.status(201).json(enrollment);
+    res.status(200).json({ success: true, enrollment });
   } catch (error) {
     console.error('Error enrolling in course:', error);
     res.status(500).json({ error: 'Failed to enroll in course' });
@@ -666,7 +648,6 @@ router.post('/:courseId/sections/:sectionId/lessons', authenticateUser, async (r
       duration,
       isPreview,
       attachments,
-      quizData,
       completionCriteria,
     } = req.body;
 
@@ -745,4 +726,24 @@ router.patch('/:courseId/status', authenticateUser, async (req, res) => {
   }
 });
 
+
+
+router.post('/onboarding/:id/:step', authenticateUser, async(req,res) => {
+  try {
+    const { id, step } = req.params;
+
+    const course = await prisma.course.update({
+      where: { id },
+      data: {
+        ...req.body,
+        lastSavedStep: step,
+
+      },
+    });
+    res.status(201).json(course);
+  } catch (error) {
+    console.error('Error creating course:', error);
+    res.status(500).json({ error: 'Failed to create course' + error });
+  }
+});
 export default router; 

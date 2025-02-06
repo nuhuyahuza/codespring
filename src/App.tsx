@@ -26,6 +26,7 @@ import { CourseLearnPage } from '@/pages/student/CourseLearnPage';
 import { CourseDetailPage } from '@/pages/CourseDetailPage';
 import { CourseCreationPage } from '@/pages/instructor/CourseCreationPage';
 import { CoursesPage } from './pages/CoursesPage';
+import { CartPage } from '@/pages/CartPage';
 
 function App() {
   const { isAuthenticated, token } = useAuth();
@@ -44,7 +45,7 @@ function App() {
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+          <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
           <Route path="/instructors" element={<InstructorsPage />} />
           <Route path="/about" element={<AboutPage />} />
           
@@ -119,6 +120,19 @@ function App() {
             path="/student/courses/:courseId/learn" 
             element={
                 <CourseLearnPage />
+            } 
+          />
+
+          {/* Course Details Route */}
+          <Route path="/courses/:id" element={<CourseDetailsPage />} />
+
+          {/* Cart Route */}
+          <Route 
+            path="/cart" 
+            element={
+              <ProtectedRoute>
+                <CartPage />
+              </ProtectedRoute>
             } 
           />
 

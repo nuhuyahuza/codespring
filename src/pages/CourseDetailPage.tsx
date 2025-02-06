@@ -7,6 +7,7 @@ import { Clock, Users, Star, BookOpen, CheckCircle, Play, Award, ChevronRight, C
 import { useAuth } from '@/features/auth';
 import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
 import { useState } from 'react';
+import { Course } from '@/types/course';
 
 // Add this type definition
 interface Lesson {
@@ -26,7 +27,7 @@ export function CourseDetailPage() {
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
-      const response = await api.get(`/courses/${courseId}`, {
+      const response = await api.get<Course>(`/courses/${courseId}`, {
         params: {
           include: 'lessons,instructor'
         }
@@ -47,8 +48,8 @@ export function CourseDetailPage() {
   const { data: enrollmentStatus } = useQuery({
     queryKey: ['enrollmentStatus', courseId],
     queryFn: async () => {
-      const response = await api.get(`/student/courses/${courseId}/enrollment-status`);
-      return response.data;
+      const response = await api.get<{ isEnrolled: boolean }>(`/student/courses/${courseId}/enrollment-status`);
+      return response.isEnrolled;
     },
     enabled: user?.role === 'STUDENT', // Only run for students
   });
@@ -109,7 +110,7 @@ export function CourseDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  <span>{course._count?.enrollments || '0'} students</span>
+                  <span>{course._count?.enrolled || '0'} students</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
@@ -142,7 +143,7 @@ export function CourseDetailPage() {
                   courseId={course.id}
                   instructorId={course.instructor.id}
                   price={course.price}
-                  isEnrolled={enrollmentStatus?.isEnrolled}
+                  isEnrolled={enrollmentStatus}
                 />
                 <p className="text-sm text-muted-foreground text-center mt-4">
                   30-day money-back guarantee

@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(enrollment);
+    return NextResponse.json({ success: true, enrollment });
   } catch (error) {
     console.error("Error creating enrollment:", error);
     return NextResponse.json(

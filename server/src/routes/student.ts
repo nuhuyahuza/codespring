@@ -101,6 +101,7 @@ router.get('/', authenticateUser, async (req, res) => {
 
 router.post('/enroll', authenticateUser, async (req, res) => {
   try {
+    console.log('Enrolling in course');
     const { courseId } = req.body;
     const userId = req.user!.id;
 

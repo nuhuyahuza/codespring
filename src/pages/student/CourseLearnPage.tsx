@@ -30,10 +30,10 @@ interface Course {
   imageUrl: string | null;
   level: string;
   status: string;
-  User: {
+  instructor: {
     name: string;
   };
-  Lesson: {
+  lessons: {
     id: string;
     title: string;
     content: string;
@@ -41,8 +41,9 @@ interface Course {
     order: number;
     courseId: string;
     createdAt: string;
+    duration: number | null;
     updatedAt: string;
-    LessonProgress: {
+    progress: {
       completed: boolean;
       timeSpent: number;
     }[];
@@ -77,7 +78,9 @@ export function CourseLearnPage() {
       throw new Error(errorData.message || 'Failed to fetch course');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('API Response:', data); // Add debug log
+    return data;
   }, [courseId, token]);
 
   const { data: course, isLoading, error } = useQuery<Course>({
@@ -94,11 +97,13 @@ export function CourseLearnPage() {
 
   // Set initial lesson only when course first loads
   useEffect(() => {
-    if (course && course?.Lesson?.length > 0 && !currentLessonId) {
-      const firstIncomplete = course.Lesson.find(
-        (lesson) => !lesson.LessonProgress?.[0]?.completed
+    if (course?.lessons?.length && !currentLessonId) {
+      const firstIncomplete = course.lessons.find(
+        (lesson) => !lesson.progress?.[0]?.completed
       );
-      setCurrentLessonId(firstIncomplete?.id || course.Lesson[0].id);
+      console.log('First incomplete lesson:', firstIncomplete); // Add debug log
+      console.log('Course Lesson:', course.lessons); // Add debug log
+      setCurrentLessonId(firstIncomplete?.id || course.lessons[0].id);
     }
   }, [course]);
 
@@ -150,11 +155,12 @@ export function CourseLearnPage() {
     },
   });
 
-  const currentLesson = course?.Lesson?.find((lesson) => lesson.id === currentLessonId);
-  const currentLessonIndex = course?.Lesson?.findIndex((lesson) => lesson.id === currentLessonId) ?? -1;
-  const previousLessonsCompleted = course?.Lesson
+  const currentLesson = course?.lessons?.find((lesson) => lesson.id === currentLessonId);
+  console.log('Current Lesson:', currentLesson); // Add debug log
+  const currentLessonIndex = course?.lessons?.findIndex((lesson) => lesson.id === currentLessonId) ?? -1;
+  const previousLessonsCompleted = course?.lessons
     ?.slice(0, currentLessonIndex)
-    .every((lesson) => lesson.LessonProgress?.[0]?.completed) ?? false;
+    .every((lesson) => lesson.progress?.[0]?.completed) ?? false;
 
   const handleLessonComplete = async () => {
     if (!currentLessonId || !course) return;
@@ -167,9 +173,9 @@ export function CourseLearnPage() {
       });
 
       // Automatically move to next lesson after completion
-      const currentIndex = course.Lesson.findIndex(l => l.id === currentLessonId);
-      if (currentIndex < course.Lesson.length - 1) {
-        setCurrentLessonId(course.Lesson[currentIndex + 1].id);
+      const currentIndex = course.lessons.findIndex(l => l.id === currentLessonId);
+      if (currentIndex < course.lessons.length - 1) {
+        setCurrentLessonId(course.lessons[currentIndex + 1].id);
       }
     } catch (error) {
       // Error handled by mutation
@@ -177,13 +183,13 @@ export function CourseLearnPage() {
   };
 
   const handleLessonSelect = (lessonId: string, index: number) => {
-    if (!course?.Lesson) return;
+    if (!course?.lessons) return;
     
     // Allow selecting completed lessons or the next available lesson
-    const isCompleted = course.Lesson[index].LessonProgress?.[0]?.completed;
-    const previousLessonsCompleted = course.Lesson
+    const isCompleted = course.lessons[index].progress?.[0]?.completed;
+    const previousLessonsCompleted = course.lessons
       .slice(0, index)
-      .every(lesson => lesson.LessonProgress?.[0]?.completed);
+      .every(lesson => lesson.progress?.[0]?.completed);
 
     if (!isCompleted && !previousLessonsCompleted) {
       toast.error('Please complete previous lessons first');
@@ -197,12 +203,12 @@ export function CourseLearnPage() {
   // Update the lesson navigation buttons
   const handlePreviousLesson = () => {
     if (!course || currentLessonIndex <= 0) return;
-    setCurrentLessonId(course.Lesson[currentLessonIndex - 1].id);
+    setCurrentLessonId(course.lessons[currentLessonIndex - 1].id);
   };
 
   const handleNextLesson = () => {
-    if (!course || currentLessonIndex >= course.Lesson.length - 1) return;
-    setCurrentLessonId(course.Lesson[currentLessonIndex + 1].id);
+    if (!course || currentLessonIndex >= course.lessons.length - 1) return;
+    setCurrentLessonId(course.lessons[currentLessonIndex + 1].id);
   };
 
   // Add click outside handler
@@ -252,10 +258,10 @@ export function CourseLearnPage() {
     );
   }
 
-  const totalLessons = course.Lesson.length;
-  const completedLessons = course.Lesson.filter((lesson) => lesson.LessonProgress?.[0]?.completed).length;
-  const progressPercentage = Math.round((completedLessons / totalLessons) * 100);
-
+  const totalLessons = course.lessons?.length ?? 0;
+  const completedLessons = course.lessons?.filter((lesson) => lesson.progress?.[0]?.completed).length ?? 0;
+  const progressPercentage = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  console.log('Course:', course); // Add debug log
   return (
     <div className="min-h-screen bg-background">
       {/* Student Dashboard Layout */}
@@ -367,7 +373,7 @@ export function CourseLearnPage() {
           {/* Course Content Layout */}
           <div className="flex h-[calc(100vh-4rem)] md:h-screen">
             {/* Course Sidebar */}
-            <>
+            <div>
               {isSidebarOpen && (
                 <div 
                   className="fixed inset-0 bg-black/20 z-40 md:hidden"
@@ -410,12 +416,12 @@ export function CourseLearnPage() {
                     <Progress value={progressPercentage} className="h-2" />
                   </div>
                   <div className="space-y-2">
-                    {course.Lesson.map((lesson, index) => {
-                      const isCompleted = lesson.LessonProgress?.[0]?.completed;
+                    {course.lessons?.map((lesson, index) => {
+                      const isCompleted = lesson.progress?.[0]?.completed;
                       const isCurrent = lesson.id === currentLessonId;
-                      const isLocked = !course.Lesson
+                      const isLocked = !course.lessons
                         .slice(0, index)
-                        .every((l) => l.LessonProgress?.[0]?.completed);
+                        .every((l) => l.progress?.[0]?.completed);
 
                       return (
                         <button
@@ -454,7 +460,7 @@ export function CourseLearnPage() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
 
             {/* Main Content Area - Updated layout */}
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -495,10 +501,10 @@ export function CourseLearnPage() {
                           Previous Lesson
                         </Button>
 
-                        {currentLesson?.LessonProgress?.[0]?.completed ? (
+                        {currentLesson?.progress?.[0]?.completed ? (
                           <Button
                             className="w-full md:w-auto"
-                            disabled={currentLessonIndex === course.Lesson.length - 1}
+                            disabled={currentLessonIndex === course.lessons?.length - 1}
                             onClick={handleNextLesson}
                           >
                             Next Lesson

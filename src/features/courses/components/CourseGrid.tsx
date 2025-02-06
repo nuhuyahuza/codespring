@@ -1,4 +1,4 @@
-import { CourseCard } from './CourseCard';
+import { CourseCard } from "@/components/courses/course-card";
 
 interface Course {
   id: string;
@@ -26,7 +26,6 @@ export function CourseGrid({ courses, onEnroll }: CourseGridProps) {
         <CourseCard
           key={course.id}
           course={course}
-          onEnroll={() => onEnroll?.(course.id)}
         />
       ))}
     </div>

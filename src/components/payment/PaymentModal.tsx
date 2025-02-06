@@ -33,8 +33,13 @@ export function PaymentModal({
       if (isDev) {
         console.log('Submitting enrollment for course:', courseId);
         
-        const response = await api.post(`/courses/${courseId}/enroll`, {});
-
+        const response = await api.post<{ success: boolean }>(`/courses/${courseId}/enroll`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        console.log(response);
         if (!response.success) {
           throw new Error('Enrollment failed');
         }
@@ -56,7 +61,12 @@ export function PaymentModal({
 
   const handlePaymentSuccess = async () => {
     try {
-      await api.post(`/courses/${courseId}/enroll`, {});
+      await api.post(`/courses/${courseId}/enroll`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
       await updateUser();
       onPaymentComplete();
     } catch (error) {
