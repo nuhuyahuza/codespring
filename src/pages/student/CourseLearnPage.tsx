@@ -306,7 +306,6 @@ export function CourseLearnPage() {
   console.log('Course:', course); // Add debug log
   return (
     <div className="min-h-screen bg-background">
-      {/* Student Dashboard Layout */}
       <div className="flex h-screen overflow-hidden">
         {/* Main Sidebar - Always visible */}
         <div className="hidden md:flex w-20 flex-col fixed inset-y-0 z-50 bg-muted/50 border-r">
@@ -423,86 +422,81 @@ export function CourseLearnPage() {
               progressPercentage={progressPercentage}
             />
 
-            {/* Main Content Area */}
+            {/* Main Content Area - Updated */}
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto">
-                <div className="container max-w-4xl mx-auto px-4 py-6">
+                <div className="h-full">
                   {currentLesson && (
-                    <div className="p-4 md:p-6 max-w-4xl mx-auto">
-                      <div className="mb-4 md:mb-6">
-                        <h3 className="text-xl md:text-2xl font-bold mb-2">
-                          {currentLesson.title}
-                        </h3>
-                        <p className="text-muted-foreground">
-                          Lesson {currentLessonIndex + 1} of {totalLessons}
-                        </p>
+                    <div className="h-full flex flex-col">
+                      <div className="flex-1 px-4 md:px-8 lg:px-12 py-6 md:py-8 lg:py-12">
+                        {renderLessonContent(currentLesson)}
+
+                        {isProgrammingCourse(course) && (
+                          <div className="mt-8">
+                            <Button
+                              variant="outline"
+                              className="mb-4"
+                              onClick={() => setShowCodeEditor(!showCodeEditor)}
+                            >
+                              <Code2 className="mr-2 h-4 w-4" />
+                              {showCodeEditor ? 'Hide Code Editor' : 'Show Code Editor'}
+                            </Button>
+                            
+                            {showCodeEditor && (
+                              <CodeEditor
+                                defaultLanguage={course.programmingLanguage || 'javascript'}
+                                className="mt-4"
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {renderLessonContent(currentLesson)}
-
-                      {isProgrammingCourse(course) && (
-                        <div className="mt-6">
+                      {/* Navigation buttons - Now in a fixed position at the bottom */}
+                      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-8 lg:px-12 py-4">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:justify-between items-stretch md:items-center">
                           <Button
                             variant="outline"
-                            className="mb-4"
-                            onClick={() => setShowCodeEditor(!showCodeEditor)}
+                            className="w-full md:w-auto"
+                            disabled={currentLessonIndex === 0}
+                            onClick={handlePreviousLesson}
                           >
-                            <Code2 className="mr-2 h-4 w-4" />
-                            {showCodeEditor ? 'Hide Code Editor' : 'Show Code Editor'}
+                            Previous Lesson
                           </Button>
-                          
-                          {showCodeEditor && (
-                            <CodeEditor
-                              defaultLanguage={course.programmingLanguage || 'javascript'}
-                              className="mt-4"
-                            />
+
+                          {currentLesson?.progress?.[0]?.completed ? (
+                            <Button
+                              className="w-full md:w-auto"
+                              disabled={currentLessonIndex === course.lessons?.length - 1}
+                              onClick={handleNextLesson}
+                            >
+                              Next Lesson
+                            </Button>
+                          ) : (
+                            <Button
+                              className="w-full md:w-auto"
+                              onClick={handleLessonComplete}
+                              disabled={!previousLessonsCompleted || progressMutation.isPending}
+                            >
+                              {progressMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                'Complete Lesson'
+                              )}
+                            </Button>
                           )}
                         </div>
-                      )}
-
-                      {/* Navigation buttons */}
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between items-stretch md:items-center mt-6">
-                        <Button
-                          variant="outline"
-                          className="w-full md:w-auto"
-                          disabled={currentLessonIndex === 0}
-                          onClick={handlePreviousLesson}
-                        >
-                          Previous Lesson
-                        </Button>
-
-                        {currentLesson?.progress?.[0]?.completed ? (
-                          <Button
-                            className="w-full md:w-auto"
-                            disabled={currentLessonIndex === course.lessons?.length - 1}
-                            onClick={handleNextLesson}
-                          >
-                            Next Lesson
-                          </Button>
-                        ) : (
-                          <Button
-                            className="w-full md:w-auto"
-                            onClick={handleLessonComplete}
-                            disabled={!previousLessonsCompleted || progressMutation.isPending}
-                          >
-                            {progressMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              'Complete Lesson'
-                            )}
-                          </Button>
-                        )}
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Updated Footer */}
-              <footer className="flex-shrink-0 border-t py-2 px-6 text-center text-xs text-muted-foreground bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              {/* Footer */}
+              <footer className="flex-shrink-0 border-t py-4 px-6 text-center text-sm text-muted-foreground bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <p>© {new Date().getFullYear()} CodeSpring. All rights reserved.</p>
               </footer>
             </div>
