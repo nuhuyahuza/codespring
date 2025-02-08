@@ -14,6 +14,7 @@ import { setupChatServer } from './websocket/chat';
 import certificatesRoutes from './routes/certificates';
 import path from 'path';
 import fs from 'fs';
+import videoRoutes from './routes/video';
 
 dotenv.config();
 
@@ -67,6 +68,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/certificates', certificatesRoutes);
+app.use('/api/video', videoRoutes);
 
 // Setup WebSocket chat server
 setupChatServer(io);

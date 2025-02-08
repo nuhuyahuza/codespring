@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { VideoUpload } from '@/components/lesson/VideoUpload';
+import { VideoPlayer } from '@/components/lesson/VideoPlayer';
 
 interface Lesson {
   id: string;
@@ -21,6 +23,9 @@ interface Lesson {
   content?: string;
   duration?: number;
   order: number;
+  videoUrl?: string;
+  videoProvider?: 'LOCAL' | 'YOUTUBE';
+  videoThumbnail?: string;
 }
 
 interface Section {
@@ -316,7 +321,40 @@ export function CurriculumStep({ initialData, onSave }: CurriculumStepProps) {
                                                   className="w-32"
                                                 />
                                               </div>
-                                              {(lesson.type === 'READING' || lesson.type === 'QUIZ' || lesson.type === 'ASSIGNMENT') && (
+                                              {lesson.type === 'VIDEO' ? (
+                                                <div className="space-y-4">
+                                                  {lesson.videoUrl ? (
+                                                    <div className="space-y-2">
+                                                      <VideoPlayer url={lesson.videoUrl} />
+                                                      <div className="flex justify-end">
+                                                        <Button
+                                                          variant="outline"
+                                                          size="sm"
+                                                          onClick={() => updateLesson(section.id, lesson.id, {
+                                                            videoUrl: undefined,
+                                                            videoProvider: undefined,
+                                                            videoThumbnail: undefined,
+                                                            duration: undefined
+                                                          })}
+                                                        >
+                                                          Change Video
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  ) : (
+                                                    <VideoUpload
+                                                      onVideoAdded={({ url, duration, thumbnail, provider }) => {
+                                                        updateLesson(section.id, lesson.id, {
+                                                          videoUrl: url,
+                                                          duration,
+                                                          videoThumbnail: thumbnail,
+                                                          videoProvider: provider
+                                                        });
+                                                      }}
+                                                    />
+                                                  )}
+                                                </div>
+                                              ) : (
                                                 <Textarea
                                                   value={lesson.content || ''}
                                                   onChange={(e) =>

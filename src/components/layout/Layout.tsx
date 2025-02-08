@@ -11,7 +11,9 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const isAuthPage = location.pathname === '/login' || 
+                    location.pathname === '/signup' || 
+                    location.pathname.startsWith('/dashboard');
 
   if (isAuthPage) {
     return <>{children}</>;

@@ -36,6 +36,12 @@ enum ResourceType {
   LINK
 }
 
+enum VideoProvider {
+  LOCAL
+  YOUTUBE
+  VIMEO
+}
+
 model User {
   id                     String           @id @default(uuid())
   email                  String           @unique
@@ -181,29 +187,61 @@ model GroupMember {
   @@index([groupId])
 }
 
+model Video {
+  id          String        @id @default(uuid())
+  url         String
+  provider    VideoProvider @default(LOCAL)
+  duration    Int          // Duration in seconds
+  thumbnail   String?
+  metadata    Json?        // Store additional metadata like resolution, format, etc.
+  lessonId    String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  lesson      Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model Attachment {
+  id          String       @id @default(uuid())
+  name        String
+  url         String
+  type        String      // MIME type
+  size        Int         // Size in bytes
+  lessonId    String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  lesson      Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
 model Lesson {
   id                String           @id @default(uuid())
   title             String
   description       String?          @db.Text
   type             LessonType       @default(VIDEO)
   content          String?          @db.Text
-  videoUrl         String?
-  duration         Int?
-  order            Int              @default(0)  // Added default
+  order            Int              @default(0)
   isPreview        Boolean          @default(false)
-  sectionId        String?          // Made optional temporarily
+  sectionId        String?
   courseId         String
-  attachments      Json?            // Array of attachment URLs and metadata
-  completionCriteria Json?          // Specific completion requirements
+  completionCriteria Json?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   // Relations
-  section          Section?         @relation(fields: [sectionId], references: [id], onDelete: SetNull)  // Made optional
+  section          Section?         @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   progress         LessonProgress[]
   resources        Resource[]
   submissions      Submission[]
+  video            Video?
+  attachments      Attachment[]
 
   @@index([sectionId])
   @@index([courseId])
