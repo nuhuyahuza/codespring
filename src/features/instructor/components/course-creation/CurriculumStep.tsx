@@ -196,6 +196,33 @@ export function CurriculumStep({ initialData, onSave }: CurriculumStepProps) {
     setSections(newSections);
   };
 
+  const handleSave = async () => {
+    // Clean up the sections data before saving
+    const cleanedSections = sections.map(section => ({
+      id: section.id,
+      title: section.title,
+      description: section.description,
+      order: section.order,
+      lessons: section.lessons.map(lesson => ({
+        id: lesson.id,
+        title: lesson.title,
+        type: lesson.type,
+        content: lesson.content,
+        duration: lesson.duration,
+        order: lesson.order,
+        videoUrl: lesson.videoUrl,
+        videoProvider: lesson.videoProvider,
+        videoThumbnail: lesson.videoThumbnail,
+      }))
+    }));
+
+    try {
+      await onSave({ sections: cleanedSections });
+    } catch (error) {
+      console.error('Failed to save curriculum:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -348,7 +375,8 @@ export function CurriculumStep({ initialData, onSave }: CurriculumStepProps) {
                                                           videoUrl: url,
                                                           duration,
                                                           videoThumbnail: thumbnail,
-                                                          videoProvider: provider
+                                                          videoProvider: provider,
+                                                          content: url // Store the URL in content as well for backward compatibility
                                                         });
                                                       }}
                                                     />
@@ -410,7 +438,10 @@ export function CurriculumStep({ initialData, onSave }: CurriculumStepProps) {
         Add Section
       </Button>
 
-      <Button onClick={() => onSave({ sections })} className="w-full bg-green-600 hover:bg-green-700">
+      <Button 
+        onClick={handleSave} 
+        className="w-full bg-green-600 hover:bg-green-700"
+      >
         Save Curriculum
       </Button>
     </div>

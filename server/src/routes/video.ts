@@ -2,10 +2,31 @@ import { Router, Request, Response, RequestHandler } from 'express';
 import { extractVideoId, getYoutubeVideoDetails } from '../utils/youtube';
 import multer from 'multer';
 import { VideoProcessor } from '../services/VideoProcessor';
+import path from 'path';
+import fs from 'fs/promises';
 
 const router = Router();
+const SERVER_URL = process.env.VITE_API_URL || 'http://localhost:5000';
+
+// Configure storage
+const storage = multer.diskStorage({
+  destination: async function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'videos');
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error as Error, uploadDir);
+    }
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: storage,
   limits: {
     fileSize: 500 * 1024 * 1024, // 500MB
   },
@@ -40,20 +61,15 @@ const handleVideoUpload: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const videoProcessor = VideoProcessor.getInstance();
-    const optimizedVideo = await videoProcessor.optimizeVideo(new File([file.buffer], file.originalname));
-    const thumbnail = await videoProcessor.generateThumbnail(new File([file.buffer], file.originalname));
+    // Generate video URL with full server URL
+    const videoUrl = `${SERVER_URL}/uploads/videos/${file.filename}`;
+    const thumbnailUrl = `${SERVER_URL}/uploads/thumbnails/${path.parse(file.filename).name}.jpg`;
 
-    // For now, we'll return temporary URLs. In production, you'd upload these to cloud storage
-    const videoUrl = URL.createObjectURL(optimizedVideo);
-    const thumbnailUrl = thumbnail;
-
-    const metadata = await videoProcessor.processVideoUrl(videoUrl);
-
+    // Return the URLs
     res.json({
       url: videoUrl,
       thumbnail: thumbnailUrl,
-      duration: metadata.duration,
+      duration: 0, // You can implement duration extraction if needed
     });
   } catch (error) {
     console.error('Video upload error:', error);

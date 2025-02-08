@@ -41,13 +41,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
-const __dirname = process.cwd();
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads/course-thumbnails');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure uploads directories exist
+const uploadDirs = [
+  path.join(process.cwd(), 'uploads/videos'),
+  path.join(process.cwd(), 'uploads/thumbnails')
+];
+
+for (const dir of uploadDirs) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
 
 // Health Check Route
