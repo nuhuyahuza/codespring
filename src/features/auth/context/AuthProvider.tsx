@@ -86,14 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isAuthenticated: !!user,
         isLoading,
-        error,
         login,
         logout,
-        cart,
-        addToCart: (item: CartItem) => setCart(prev => [...prev, item]),
-        removeFromCart: (itemId: string) => 
-          setCart(prev => prev.filter(item => item.id !== itemId)),
-        clearCart: () => setCart([]),
+        updateUser: () => Promise.resolve(),
       }}
     >
       {children}

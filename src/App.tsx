@@ -45,7 +45,7 @@ function App() {
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/courses/:courseId" element={<CourseDetailPage />} />
           <Route path="/instructors" element={<InstructorsPage />} />
           <Route path="/about" element={<AboutPage />} />
           
@@ -124,7 +124,7 @@ function App() {
           />
 
           {/* Course Details Route */}
-          <Route path="/courses/:id" element={<CourseDetailsPage />} />
+          <Route path="/courses/:id" element={<CourseDetailPage />} />
 
           {/* Cart Route */}
           <Route 

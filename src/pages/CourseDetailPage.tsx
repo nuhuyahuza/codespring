@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CourseActions } from '@/components/courses/CourseActions';
@@ -8,6 +8,8 @@ import { useAuth } from '@/features/auth';
 import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
 import { useState } from 'react';
 import { Course } from '@/types/course';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 // Add this type definition
 interface Lesson {
@@ -21,8 +23,11 @@ interface Lesson {
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const navigate = useNavigate();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
@@ -53,6 +58,35 @@ export function CourseDetailPage() {
     },
     enabled: user?.role === 'STUDENT', // Only run for students
   });
+
+
+  const handleEnrollClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/courses/${courseId}` } });
+      return;
+    }
+
+    if (!user?.hasCompletedOnboarding) {
+      navigate('/onboarding');
+      return;
+    }
+
+    if (!course) return;
+
+    // Add to cart using cart context
+    addToCart({
+      id: courseId!,
+      title: course.title,
+      price: course.price
+    });
+    toast.success('Course added to cart!');
+  };
+
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    toast.success('Successfully enrolled in the course!');
+    navigate(`/courses/${courseId}/learn`);
+  };
 
   if (isLoading) {
     return (
@@ -144,6 +178,7 @@ export function CourseDetailPage() {
                   instructorId={course.instructor.id}
                   price={course.price}
                   isEnrolled={enrollmentStatus}
+                  onEnroll={handleEnrollClick}
                 />
                 <p className="text-sm text-muted-foreground text-center mt-4">
                   30-day money-back guarantee

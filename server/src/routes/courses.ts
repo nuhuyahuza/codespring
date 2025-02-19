@@ -726,24 +726,54 @@ router.patch('/:courseId/status', authenticateUser, async (req, res) => {
   }
 });
 
-
-
 router.post('/:id/:step', authenticateUser, async(req,res) => {
   try {
     const { id, step } = req.params;
+    const { sections, completedSteps, ...rest } = req.body;
+
+    console.log('Request body:', { sections, completedSteps, rest });
+
+    // Ensure sections is an array
+    const sectionsArray = Array.isArray(sections) ? sections : 
+      typeof sections === 'string' ? JSON.parse(sections) : 
+      sections ? [sections] : [];
+
+    console.log('Processed sections:', sectionsArray);
 
     const course = await prisma.course.update({
       where: { id },
       data: {
-        ...req.body,
+        ...rest,
+        sections: sectionsArray.length > 0 ? {
+          create: sectionsArray.map((section: any) => ({
+            title: section.title,
+            description: section.description,
+            order: section.order,
+            lessons: section.lessons && {
+              create: Array.isArray(section.lessons) ? section.lessons.map((lesson: any) => ({
+                title: lesson.title,
+                type: lesson.type,
+                content: lesson.content,
+                duration: lesson.duration || 0,
+                order: lesson.order
+              })) : []
+            }
+          }))
+        } : undefined,
         lastSavedStep: step,
-
+        completedSteps: Array.isArray(completedSteps) ? completedSteps : 
+          typeof completedSteps === 'string' ? JSON.parse(completedSteps) : undefined,
+        updatedAt: new Date()
       },
     });
     res.status(201).json(course);
   } catch (error) {
-    console.error('Error creating course:', error);
-    res.status(500).json({ error: 'Failed to create course' + error });
+    console.error('Error updating course:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Failed to update course: ' + error });
   }
 });
 export default router; 

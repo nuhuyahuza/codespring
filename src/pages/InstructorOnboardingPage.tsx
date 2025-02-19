@@ -266,6 +266,7 @@ export function InstructorOnboardingPage() {
                     type="submit"
                     className="w-full bg-green-600 hover:bg-green-700"
                     disabled={isSubmitting}
+                    onClick={onSubmit}
                   >
                     {isSubmitting ? 'Saving...' : 'Complete Profile'}
                   </Button>

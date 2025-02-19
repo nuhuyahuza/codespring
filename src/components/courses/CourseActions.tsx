@@ -8,9 +8,10 @@ interface CourseActionsProps {
   instructorId: string;
   price: number;
   isEnrolled?: boolean;
+  onEnroll: () => void;
 }
 
-export function CourseActions({ courseId, instructorId, price, isEnrolled }: CourseActionsProps) {
+export function CourseActions({ courseId, instructorId, price, isEnrolled, onEnroll }: CourseActionsProps) {
   const { user } = useAuth();
 
   // If user is not logged in, show sign in to enroll
@@ -72,7 +73,7 @@ export function CourseActions({ courseId, instructorId, price, isEnrolled }: Cou
   return (
     <Button 
       className="w-full bg-green-600 hover:bg-green-700"
-      onClick={() => {/* Add to cart logic */}}
+      onClick={onEnroll}
     >
       Add to Cart - ${price.toFixed(2)}
     </Button>

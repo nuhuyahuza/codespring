@@ -35,7 +35,7 @@ interface Course {
 
 const SAMPLE_COURSE: Course = {
   id: '1',
-  title: 'Web Development Fundamentals',
+  title: 'Web Devsasaselopment Fundamentals',
   description: 'A comprehensive introduction to modern web development. Learn HTML, CSS, JavaScript, and modern development tools to build responsive and dynamic websites.',
   instructor: 'John Doe',
   thumbnail: '/course-thumbnails/web-dev.jpg',

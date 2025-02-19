@@ -58,11 +58,11 @@ export async function seed() {
         price: 99.99,
         category: 'development',
         level: 'beginner',
-        duration: '30.50',
+        duration: 30.50,
         status: 'PUBLISHED',
         imageUrl: '/courses/web-dev-intro.jpg',
         thumbnail: '/courses/web-dev-thumb.jpg',
-        rating: '4.50',
+        rating: 4.50,
         learningObjectives: JSON.stringify([
           'Understand HTML5 and semantic markup',
           'Master CSS layouts and responsive design',
@@ -83,7 +83,6 @@ export async function seed() {
               title: 'HTML Basics',
               content: 'Introduction to HTML',
               order: 1,
-              videoUrl: 'https://example.com/video1',
               createdAt: new Date(),
               updatedAt: new Date(),
             },
@@ -92,7 +91,6 @@ export async function seed() {
               title: 'CSS Fundamentals',
               content: 'Learn CSS styling',
               order: 2,
-              videoUrl: 'https://example.com/video2',
               createdAt: new Date(),
               updatedAt: new Date(),
             },
@@ -123,7 +121,7 @@ export async function seed() {
         courseId: webDevCourse.id,
         createdAt: new Date(),
         updatedAt: new Date(),
-        GroupMember: {
+        groupMembers: {
           create: [
             {
               id: '1',
@@ -141,7 +139,7 @@ export async function seed() {
             },
           ],
         },
-        Message: {
+        messages: {
           create: [
             {
               id: '1',
