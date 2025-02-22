@@ -68,7 +68,7 @@ const LANGUAGE_OPTIONS = [
 export function InstructorOnboardingPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,12 +84,12 @@ export function InstructorOnboardingPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-	console.log("Hello");
     console.log('Form validation state:', form.formState);
     console.log('Form errors:', form.formState.errors);
     
     if (!form.formState.isValid) {
       console.log('Form is invalid, validation errors:', form.formState.errors);
+      toast.error('Please fill in all required fields correctly');
       return;
     }
 
@@ -97,18 +97,42 @@ export function InstructorOnboardingPage() {
     
     try {
       setIsSubmitting(true);
+      
+      // Get the auth token
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       console.log('Submitting values:', values);
-      await api.post('/instructors/onboarding', values);
+      
+      // Add auth token to request
+      const response = await api.post('/instructors/onboarding', values, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log('Server response:', response);
+      
+      // Update user data in auth context
+      await updateUser();
       
       toast.success('Profile completed successfully!', {
         id: toastId,
         duration: 3000,
       });
       
-      navigate('/instructor/dashboard');
+      navigate('/dashboard/instructor');
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error('Failed to save your information. Please try again.', {
+      
+      // More detailed error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to save your information. Please try again.';
+      
+      toast.error(errorMessage, {
         id: toastId,
         duration: 3000,
       });
@@ -116,10 +140,6 @@ export function InstructorOnboardingPage() {
       setIsSubmitting(false);
     }
   };
-
-  const handleSub = () => {
-	console.log("Yo");
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,7 +155,7 @@ export function InstructorOnboardingPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSub)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
                     control={form.control}
                     name="expertise"
@@ -262,11 +282,34 @@ export function InstructorOnboardingPage() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="qualifications"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Qualifications & Certifications</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Add your qualifications (comma-separated)"
+                            value={field.value?.join(', ')}
+                            onChange={(e) => {
+                              const quals = e.target.value
+                                .split(',')
+                                .map(q => q.trim())
+                                .filter(q => q.length > 0);
+                              field.onChange(quals);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <Button
                     type="submit"
                     className="w-full bg-green-600 hover:bg-green-700"
                     disabled={isSubmitting}
-                    onClick={onSubmit}
                   >
                     {isSubmitting ? 'Saving...' : 'Complete Profile'}
                   </Button>

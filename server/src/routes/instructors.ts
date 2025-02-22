@@ -14,7 +14,10 @@ router.post('/onboarding', authenticateUser, async (req, res) => {
     // Update user with instructor profile data
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        ...data,
+        hasCompletedOnboarding: true,
+      },
     });
 
     res.json({

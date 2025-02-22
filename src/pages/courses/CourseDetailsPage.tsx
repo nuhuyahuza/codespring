@@ -4,7 +4,6 @@ import { Star, Users, Clock, BookOpen, CheckCircle, Play, Award } from 'lucide-r
 import { Button } from '@/components/ui';
 import { useAuth } from '@/features/auth';
 import { useCart } from '@/contexts/CartContext';
-import axios from 'axios';
 import { DEFAULT_COURSE_IMAGE } from '@/config/constants';
 import { PaymentModal } from '@/components/payment/PaymentModal';
 import { toast } from 'sonner';

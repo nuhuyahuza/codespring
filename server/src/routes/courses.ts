@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
 import crypto from 'crypto';
 import { upload } from '../middleware/upload';
@@ -235,7 +235,6 @@ router.get('/:id/content', async (req, res) => {
       isPreview: index < 3,
       ...(isEnrolled || isInstructor ? {
         content: lesson.content,
-        videoUrl: lesson.videoUrl,
         completed: lesson.progress?.[0]?.completed ?? false,
         timeSpent: lesson.progress?.[0]?.timeSpent ?? 0,
       } : {}),
@@ -679,8 +678,6 @@ router.post('/:courseId/sections/:sectionId/lessons', authenticateUser, async (r
         description,
         type,
         content,
-        videoUrl,
-        duration,
         isPreview,
         attachments,
         completionCriteria,
