@@ -205,25 +205,47 @@ export function useCourseCreation(courseId?: string) {
           }
           endpoint = `/courses/${storedCourseIdCurriculum}/${step}`;
           const curriculumCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
-          payload = {
-            sections: {
-              create: data.sections.map((section: any, index: number) => ({
-                title: section.title,
-                description: section.description,
-                order: index,
-                lessons: {
-                  create: section.lessons.map((lesson: any, lessonIndex: number) => ({
+
+          console.log('Curriculum data received:', data); // Debug log
+
+          // Ensure sections data is valid
+          if (!data.sections || !Array.isArray(data.sections)) {
+            throw new Error('Invalid curriculum data: sections are required');
+          }
+
+          // Format sections and lessons
+          const formattedSections = data.sections.map((section: any, index: number) => {
+            if (!section.title) {
+              throw new Error('Section title is required');
+            }
+
+            return {
+              title: section.title,
+              description: section.description || '',
+              order: index,
+              lessons: {
+                create: Array.isArray(section.lessons) ? section.lessons.map((lesson: any, lessonIndex: number) => {
+                  if (!lesson.title) {
+                    throw new Error('Lesson title is required');
+                  }
+                  return {
                     title: lesson.title,
-                    type: lesson.type,
-                    content: lesson.content,
+                    type: lesson.type || 'VIDEO',
+                    content: lesson.content || '',
                     duration: lesson.duration || 0,
                     order: lessonIndex
-                  }))
-                }
-              }))
-            },
+                  };
+                }) : []
+              }
+            };
+          });
+
+          payload = {
             lastSavedStep: step,
-            completedSteps: JSON.stringify([...new Set([...curriculumCompletedSteps, step])])
+            completedSteps: JSON.stringify([...new Set([...curriculumCompletedSteps, step])]),
+            sections: {
+              create: formattedSections
+            }
           };
           break;
 

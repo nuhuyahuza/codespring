@@ -723,6 +723,19 @@ router.patch('/:courseId/status', authenticateUser, async (req, res) => {
   }
 });
 
+interface Section {
+  title: string;
+  description?: string;
+  order?: number;
+  lessons?: {
+    title: string;
+    type?: 'VIDEO' | 'READING' | 'QUIZ' | 'ASSIGNMENT';
+    content?: string;
+    duration?: number;
+    order?: number;
+  }[];
+}
+
 router.post('/:id/:step', authenticateUser, async(req,res) => {
   try {
     const { id, step } = req.params;
@@ -730,32 +743,44 @@ router.post('/:id/:step', authenticateUser, async(req,res) => {
 
     console.log('Request body:', { sections, completedSteps, rest });
 
-    // Ensure sections is an array
+    // Ensure sections is an array and validate each section
     const sectionsArray = Array.isArray(sections) ? sections : 
       typeof sections === 'string' ? JSON.parse(sections) : 
       sections ? [sections] : [];
 
     console.log('Processed sections:', sectionsArray);
 
+    // Validate and format sections data
+    const validSections = sectionsArray
+      .filter((section: unknown): section is Section => 
+        section !== null && 
+        typeof section === 'object' && 
+        'title' in section && 
+        typeof (section as Section).title === 'string'
+      )
+      .map((section: Section) => ({
+        title: section.title,
+        description: section.description || '',
+        order: typeof section.order === 'number' ? section.order : 0,
+        lessons: section.lessons && Array.isArray(section.lessons) ? {
+          create: section.lessons
+            .filter((lesson: any) => lesson && lesson.title)
+            .map((lesson: any) => ({
+              title: lesson.title,
+              type: lesson.type || 'VIDEO',
+              content: lesson.content || '',
+              duration: typeof lesson.duration === 'number' ? lesson.duration : 0,
+              order: typeof lesson.order === 'number' ? lesson.order : 0
+            }))
+        } : undefined
+      }));
+
     const course = await prisma.course.update({
       where: { id },
       data: {
         ...rest,
-        sections: sectionsArray.length > 0 ? {
-          create: sectionsArray.map((section: any) => ({
-            title: section.title,
-            description: section.description,
-            order: section.order,
-            lessons: section.lessons && {
-              create: Array.isArray(section.lessons) ? section.lessons.map((lesson: any) => ({
-                title: lesson.title,
-                type: lesson.type,
-                content: lesson.content,
-                duration: lesson.duration || 0,
-                order: lesson.order
-              })) : []
-            }
-          }))
+        sections: validSections.length > 0 ? {
+          create: validSections
         } : undefined,
         lastSavedStep: step,
         completedSteps: Array.isArray(completedSteps) ? completedSteps : 
