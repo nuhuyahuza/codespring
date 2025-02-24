@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { 
   Settings, 
   CheckCircle,
@@ -22,6 +22,7 @@ import { CurriculumStep } from '@/features/instructor/components/course-creation
 import { PricingStep } from '@/features/instructor/components/course-creation/PricingStep';
 import { useCourseCreation } from '@/features/instructor/hooks/useCourseCreation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { toast } from 'react-hot-toast';
 
 const STEPS = [
   { 
@@ -80,8 +81,7 @@ const STEPS = [
 
 export function CourseCreationPage() {
   const { courseId } = useParams();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(() => {
     return searchParams.get('step') || 'basics';
   });
@@ -103,31 +103,41 @@ export function CourseCreationPage() {
       await saveStep(currentStep, stepData);
       
       // Move to next step
-      const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-      if (currentIndex < STEPS.length - 1) {
-        const nextStep = STEPS[currentIndex + 1].id;
+      const stepOrder = ['basics', 'requirements', 'curriculum', 'pricing'];
+      const currentIndex = stepOrder.indexOf(currentStep);
+      if (currentIndex < stepOrder.length - 1) {
+        const nextStep = stepOrder[currentIndex + 1];
         setCurrentStep(nextStep);
-        // Only update URL if we have a courseId
-        if (courseId) {
-          navigate(`/dashboard/courses/${courseId}/edit?step=${nextStep}`, { replace: true });
-        }
+        // Update URL without page refresh
+        setSearchParams({ step: nextStep }, { replace: true });
       }
     } catch (error) {
       console.error('Error saving step:', error);
+      toast.error('Failed to save progress');
     }
   };
 
   const handleStepChange = (stepId: string) => {
-    // Only allow moving to next step if current step is completed
-    const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-    const targetIndex = STEPS.findIndex(step => step.id === stepId);
+    const stepOrder = ['basics', 'requirements', 'curriculum', 'pricing'];
+    const currentStepIndex = stepOrder.indexOf(currentStep);
+    const targetStepIndex = stepOrder.indexOf(stepId);
     
-    if (targetIndex <= currentIndex || courseData[currentStep as keyof typeof courseData]) {
+    // Get the last saved step index
+    const lastSavedStep = courseData.lastSavedStep || 'basics';
+    const lastSavedStepIndex = stepOrder.indexOf(lastSavedStep);
+    
+    // Can only move to next step if current step is completed
+    // Or move to any previous step
+    const canNavigate = targetStepIndex <= (lastSavedStepIndex + 1) && 
+                       (targetStepIndex <= currentStepIndex || 
+                        courseData[currentStep as keyof typeof courseData]);
+
+    if (canNavigate) {
       setCurrentStep(stepId);
-      // Only update URL if we have a courseId
-      if (courseId) {
-        navigate(`/dashboard/courses/${courseId}/edit?step=${stepId}`, { replace: true });
-      }
+      // Update URL without page refresh
+      setSearchParams({ step: stepId }, { replace: true });
+    } else {
+      toast.error('Please complete the current step first');
     }
   };
 
@@ -150,6 +160,7 @@ export function CourseCreationPage() {
       case 'curriculum':
         return (
           <CurriculumStep
+            initialData={courseData.curriculum}
             onSave={handleSaveAndContinue}
           />
         );

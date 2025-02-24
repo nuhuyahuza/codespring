@@ -26,10 +26,13 @@ interface CourseData {
       lessons: Array<{
         id: string;
         title: string;
-        type: string;
+        type: 'VIDEO' | 'READING' | 'QUIZ' | 'ASSIGNMENT';
         content?: string;
         duration?: number;
         order: number;
+        videoUrl?: string;
+        videoProvider?: 'LOCAL' | 'YOUTUBE';
+        videoThumbnail?: string;
       }>;
       order: number;
     }>;
@@ -51,9 +54,19 @@ interface CourseData {
 }
 
 interface ApiResponse {
-  id: string;
-  [key: string]: any;
-}
+    id: string;
+    title?: string;
+    description?: string;
+    category?: string;
+    level?: string;
+    language?: string;
+    tags?: string;
+    status?: 'DRAFT' | 'PUBLISHED';
+    lastSavedStep?: string;
+    completedSteps?: string;
+    [key: string]: any;
+  };
+
 
 export function useCourseCreation(courseId?: string) {
   const { token, user } = useAuth();
@@ -77,19 +90,19 @@ export function useCourseCreation(courseId?: string) {
       // Transform the data to match our state structure
       const transformedData: CourseData = {
         basics: {
-          title: response.title || '',
-          description: response.description || '',
-          category: response.category || '',
-          level: response.level || 'BEGINNER',
-          language: response.language || 'English',
-          tags: response.tags ? response.tags.split(',').filter(Boolean) : [],
+          title: response.data.title || '',
+          description: response.data.description || '',
+          category: response.data.category || '',
+          level: response.data.level || 'BEGINNER',
+          language: response.data.language || 'English',
+          tags: response.data.tags ? response.data.tags.split(',').filter(Boolean) : [],
         },
         requirements: {
-          learningObjectives: response.learningObjectives ? JSON.parse(response.learningObjectives as string) : [],
-          requirements: response.requirements ? JSON.parse(response.requirements as string) : [],
+          learningObjectives: response.data.learningObjectives ? JSON.parse(response.data.learningObjectives as string) : [],
+          requirements: response.data.requirements ? JSON.parse(response.data.requirements as string) : [],
         },
         curriculum: {
-          sections: Array.isArray(response.sections) ? response.sections.map((section: any) => ({
+          sections: Array.isArray(response.data.sections) ? response.data.sections.map((section: any) => ({
             id: section.id,
             title: section.title,
             description: section.description || '',
@@ -105,14 +118,14 @@ export function useCourseCreation(courseId?: string) {
           })) : []
         },
         pricing: {
-          price: Number(response.price) || 0,
-          isLiveEnabled: Boolean(response.isLiveEnabled),
+          price: Number(response.data.price) || 0,
+          isLiveEnabled: Boolean(response.data.isLiveEnabled),
           hasCertification: false,
-          status: response.status || 'DRAFT',
-          liveSessionDetails: response.liveSessionDetails ? JSON.parse(response.liveSessionDetails as string) : undefined,
+          status: (response.data.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT') as 'DRAFT' | 'PUBLISHED',
+          liveSessionDetails: response.data.liveSessionDetails ? JSON.parse(response.data.liveSessionDetails as string) : undefined,
         },
-        completedSteps: response.completedSteps || '[]',
-        lastSavedStep: response.lastSavedStep || 'basics'
+        completedSteps: response.data.completedSteps || '[]',
+        lastSavedStep: response.data.lastSavedStep || 'basics'
       };
 
       console.log('Transformed Data:', transformedData);
@@ -140,26 +153,17 @@ export function useCourseCreation(courseId?: string) {
 
     setIsLoading(true);
     try {
-      // Update local state
-      setCourseData(prev => ({
-        ...prev,
-        [step]: data,
-        lastSavedStep: step,
-        completedSteps: JSON.stringify([
-          ...(prev.completedSteps ? JSON.parse(prev.completedSteps) : []),
-          step
-        ])
-      }));
-
       let payload;
-      let headers: Record<string, string> = {
+      let endpoint: string;
+      
+      const headers: Record<string, string> = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
-      // Prepare data based on step
       switch (step) {
         case 'basics':
+          endpoint = courseId ? `/courses/${courseId}` : '/courses';
           payload = {
             title: data.title,
             description: data.description,
@@ -180,6 +184,11 @@ export function useCourseCreation(courseId?: string) {
           break;
 
         case 'requirements':
+          const storedCourseId = courseId || sessionStorage.getItem('currentCourseId');
+          if (!storedCourseId) {
+            throw new Error('Course ID not found');
+          }
+          endpoint = `/courses/${storedCourseId}/${step}`;
           const prevCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
           payload = {
             learningObjectives: JSON.stringify(data.learningObjectives),
@@ -190,6 +199,11 @@ export function useCourseCreation(courseId?: string) {
           break;
 
         case 'curriculum':
+          const storedCourseIdCurriculum = courseId || sessionStorage.getItem('currentCourseId');
+          if (!storedCourseIdCurriculum) {
+            throw new Error('Course ID not found');
+          }
+          endpoint = `/courses/${storedCourseIdCurriculum}/${step}`;
           const curriculumCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
           payload = {
             sections: {
@@ -214,6 +228,11 @@ export function useCourseCreation(courseId?: string) {
           break;
 
         case 'pricing':
+          const storedCourseIdPricing = courseId || sessionStorage.getItem('currentCourseId');
+          if (!storedCourseIdPricing) {
+            throw new Error('Course ID not found');
+          }
+          endpoint = `/courses/${storedCourseIdPricing}/${step}`;
           const pricingCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
           payload = {
             price: Number(data.price) || 0,
@@ -226,44 +245,34 @@ export function useCourseCreation(courseId?: string) {
           break;
 
         default:
-          payload = data;
+          throw new Error(`Unknown step: ${step}`);
       }
 
-      // Make API call
-      const url = courseId 
-        ? `/courses/${courseId}/${step}`
-        : '/courses';
+      console.log('Sending request to:', endpoint);
+      console.log('With payload:', payload);
 
-      const response = await api.post(url, payload, { headers }) as ApiResponse;
+      const response = await api.post(endpoint, payload, { headers }) as ApiResponse;
+      console.log("Shado",response);
 
-      // Handle navigation based on step
-      if (!courseId && step === 'basics' && response.id) {
-        // For new course, navigate to edit with the first step
-        navigate(`/dashboard/courses/${response.id}/edit?step=requirements`, { replace: true });
-      } else if (courseId) {
-        // For existing course, determine next step
-        const stepOrder = ['basics', 'requirements', 'curriculum', 'pricing'];
-        const currentIndex = stepOrder.indexOf(step);
-        if (currentIndex < stepOrder.length - 1) {
-          // If there's a next step, update the URL to show it
-          const nextStep = stepOrder[currentIndex + 1];
-          navigate(`/dashboard/courses/${courseId}/edit?step=${nextStep}`, { replace: true });
-        }
+      // Store the course ID immediately after creating the course
+      if (!courseId) {
+        sessionStorage.setItem('currentCourseId', response.id);
       }
 
-      // Update local state with completed step
-      if (response.completedSteps) {
-        setCourseData(prev => ({
-          ...prev,
-          completedSteps: JSON.parse(response.completedSteps as string)
-        }));
-      }
+      // Update state and return
+      setCourseData(prev => ({
+        ...prev,
+        [step]: data,
+        lastSavedStep: step,
+        completedSteps: JSON.stringify([step])
+      }));
 
       toast.success('Progress saved successfully');
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error);
-      toast.error('Failed to save progress');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to save progress';
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
