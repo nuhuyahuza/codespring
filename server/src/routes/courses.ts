@@ -1,11 +1,26 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, LessonType } from '@prisma/client';
 import { authenticateUser } from '../middleware/auth';
 import crypto from 'crypto';
 import { upload } from '../middleware/upload';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+interface Section {
+  title: string;
+  description?: string;
+  order?: number;
+  lessons?: Lesson[];
+}
+
+interface Lesson {
+  title: string;
+  type?: LessonType;
+  content?: string;
+  order?: number;
+  duration?: number;
+}
 
 // Type definitions
 // Get all courses with optional featured filter
@@ -723,19 +738,6 @@ router.patch('/:courseId/status', authenticateUser, async (req, res) => {
   }
 });
 
-interface Section {
-  title: string;
-  description?: string;
-  order?: number;
-  lessons?: {
-    title: string;
-    type?: 'VIDEO' | 'READING' | 'QUIZ' | 'ASSIGNMENT';
-    content?: string;
-    duration?: number;
-    order?: number;
-  }[];
-}
-
 router.post('/:id/:step', authenticateUser, async(req,res) => {
   try {
     const { id, step } = req.params;
@@ -743,52 +745,149 @@ router.post('/:id/:step', authenticateUser, async(req,res) => {
 
     console.log('Request body:', { sections, completedSteps, rest });
 
-    // Ensure sections is an array and validate each section
-    const sectionsArray = Array.isArray(sections) ? sections : 
-      typeof sections === 'string' ? JSON.parse(sections) : 
-      sections ? [sections] : [];
+    // Handle curriculum step differently
+    if (step === 'curriculum') {
+      // First, delete existing sections (cascade will delete related lessons)
+      await prisma.section.deleteMany({
+        where: { courseId: id }
+      });
 
-    console.log('Processed sections:', sectionsArray);
+      // Update course
+      const course = await prisma.course.update({
+        where: { id },
+        data: {
+          ...rest,
+          lastSavedStep: step,
+          completedSteps: Array.isArray(completedSteps) ? completedSteps : 
+            typeof completedSteps === 'string' ? JSON.parse(completedSteps) : undefined,
+          updatedAt: new Date()
+        },
+      });
 
-    // Validate and format sections data
-    const validSections = sectionsArray
-      .filter((section: unknown): section is Section => 
-        section !== null && 
-        typeof section === 'object' && 
-        'title' in section && 
-        typeof (section as Section).title === 'string'
-      )
-      .map((section: Section) => ({
-        title: section.title,
-        description: section.description || '',
-        order: typeof section.order === 'number' ? section.order : 0,
-        lessons: section.lessons && Array.isArray(section.lessons) ? {
-          create: section.lessons
-            .filter((lesson: any) => lesson && lesson.title)
-            .map((lesson: any) => ({
-              title: lesson.title,
-              type: lesson.type || 'VIDEO',
-              content: lesson.content || '',
-              duration: typeof lesson.duration === 'number' ? lesson.duration : 0,
-              order: typeof lesson.order === 'number' ? lesson.order : 0
-            }))
-        } : undefined
-      }));
+      // Create sections and lessons if they exist
+      if (sections?.create && Array.isArray(sections.create)) {
+        console.log('Creating sections:', sections.create);
+        
+        for (const sectionData of sections.create) {
+          // Create section
+          const section = await prisma.section.create({
+            data: {
+              id: crypto.randomUUID(),
+              title: sectionData.title,
+              description: sectionData.description || '',
+              order: sectionData.order || 0,
+              courseId: id
+            },
+          });
 
-    const course = await prisma.course.update({
-      where: { id },
-      data: {
-        ...rest,
-        sections: validSections.length > 0 ? {
-          create: validSections
-        } : undefined,
-        lastSavedStep: step,
-        completedSteps: Array.isArray(completedSteps) ? completedSteps : 
-          typeof completedSteps === 'string' ? JSON.parse(completedSteps) : undefined,
-        updatedAt: new Date()
-      },
-    });
-    res.status(201).json(course);
+          // Create lessons for this section if they exist
+          if (sectionData.lessons?.create && Array.isArray(sectionData.lessons.create)) {
+            for (const lessonData of sectionData.lessons.create) {
+              await prisma.lesson.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  title: lessonData.title,
+                  type: lessonData.type || 'VIDEO',
+                  content: lessonData.content || '',
+                  order: lessonData.order || 0,
+                  courseId: id,
+                  sectionId: section.id
+                }
+              });
+            }
+          }
+        }
+      }
+
+      // Fetch the updated course with sections and lessons
+      const updatedCourse = await prisma.course.findUnique({
+        where: { id },
+        include: {
+          sections: {
+            include: {
+              lessons: true
+            }
+          }
+        }
+      });
+
+      return res.status(201).json(updatedCourse);
+    } 
+    else {
+      // Original logic for other steps
+      const sectionsArray = Array.isArray(sections) ? sections : 
+        typeof sections === 'string' ? JSON.parse(sections) : 
+        sections ? [sections] : [];
+
+      console.log('Processed sections:', sectionsArray);
+
+      // Validate and format sections data
+      const validSections = sectionsArray
+        .filter((section: unknown): section is Section => 
+          section !== null && 
+          typeof section === 'object' && 
+          'title' in section && 
+          typeof (section as Section).title === 'string'
+        )
+        .map((section: Section, index: number) => ({
+          title: section.title,
+          description: section.description || '',
+          order: index,
+          courseId: id,
+          lessons: section.lessons && Array.isArray(section.lessons) ? 
+            section.lessons
+              .filter((lesson): lesson is Lesson => lesson && typeof lesson.title === 'string')
+              .map((lesson, lessonIndex) => ({
+                title: lesson.title,
+                type: (lesson.type as LessonType) || 'VIDEO',
+                content: lesson.content || '',
+                order: lessonIndex,
+                courseId: id
+              }))
+            : []
+        }));
+
+      // Update course
+      const course = await prisma.course.update({
+        where: { id },
+        data: {
+          ...rest,
+          lastSavedStep: step,
+          completedSteps: Array.isArray(completedSteps) ? completedSteps : 
+            typeof completedSteps === 'string' ? JSON.parse(completedSteps) : undefined,
+          updatedAt: new Date()
+        },
+      });
+
+      // Create sections and lessons if in curriculum step
+      if (step === 'curriculum' && validSections.length > 0) {
+        console.log('Valid sections:', validSections);
+        for (const sectionData of validSections) {
+          const { lessons, ...sectionFields } = sectionData;
+          
+          // Create section
+          const section = await prisma.section.create({
+            data: {
+              ...sectionFields,
+              id: crypto.randomUUID()
+            },
+          });
+
+          // Create lessons for this section
+          if (lessons && lessons.length > 0) {
+            await prisma.lesson.createMany({
+              data: lessons.map((lesson: Lesson) => ({
+                id: crypto.randomUUID(),
+                ...lesson,
+                sectionId: section.id
+              }))
+            });
+          }
+        }
+      }
+
+      return res.status(201).json(course);
+    }
   } catch (error) {
     console.error('Error updating course:', error);
     if (error instanceof Error) {

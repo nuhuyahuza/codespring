@@ -90,19 +90,19 @@ export function useCourseCreation(courseId?: string) {
       // Transform the data to match our state structure
       const transformedData: CourseData = {
         basics: {
-          title: response.data.title || '',
-          description: response.data.description || '',
-          category: response.data.category || '',
-          level: response.data.level || 'BEGINNER',
-          language: response.data.language || 'English',
-          tags: response.data.tags ? response.data.tags.split(',').filter(Boolean) : [],
+          title: response.title || '',
+          description: response.description || '',
+          category: response.category || '',
+          level: response.level || 'BEGINNER',
+          language: response.language || 'English',
+          tags: response.tags ? response.tags.split(',').filter(Boolean) : [],
         },
         requirements: {
-          learningObjectives: response.data.learningObjectives ? JSON.parse(response.data.learningObjectives as string) : [],
-          requirements: response.data.requirements ? JSON.parse(response.data.requirements as string) : [],
+          learningObjectives: response.learningObjectives ? JSON.parse(response.learningObjectives as string) : [],
+          requirements: response.requirements ? JSON.parse(response.requirements as string) : [],
         },
         curriculum: {
-          sections: Array.isArray(response.data.sections) ? response.data.sections.map((section: any) => ({
+          sections: Array.isArray(response.sections) ? response.sections.map((section: any) => ({
             id: section.id,
             title: section.title,
             description: section.description || '',
@@ -118,14 +118,14 @@ export function useCourseCreation(courseId?: string) {
           })) : []
         },
         pricing: {
-          price: Number(response.data.price) || 0,
-          isLiveEnabled: Boolean(response.data.isLiveEnabled),
+          price: Number(response.price) || 0,
+          isLiveEnabled: Boolean(response.isLiveEnabled),
           hasCertification: false,
-          status: (response.data.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT') as 'DRAFT' | 'PUBLISHED',
-          liveSessionDetails: response.data.liveSessionDetails ? JSON.parse(response.data.liveSessionDetails as string) : undefined,
+          status: (response.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT') as 'DRAFT' | 'PUBLISHED',
+          liveSessionDetails: response.liveSessionDetails ? JSON.parse(response.liveSessionDetails as string) : undefined,
         },
-        completedSteps: response.data.completedSteps || '[]',
-        lastSavedStep: response.data.lastSavedStep || 'basics'
+        completedSteps: response.completedSteps || '[]',
+        lastSavedStep: response.lastSavedStep || 'basics'
       };
 
       console.log('Transformed Data:', transformedData);
