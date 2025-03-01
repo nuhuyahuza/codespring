@@ -69,7 +69,14 @@ router.get('/:id', async (req, res) => {
             name: true,
           },
         },
-        lessons: true,
+        sections: {
+          include: {
+            lessons: true
+          },
+          orderBy: {
+            order: 'asc'
+          }
+        },
         _count: {
           select: {
             enrollments: true,

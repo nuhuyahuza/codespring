@@ -102,20 +102,42 @@ export function useCourseCreation(courseId?: string) {
           requirements: response.requirements ? JSON.parse(response.requirements as string) : [],
         },
         curriculum: {
-          sections: Array.isArray(response.sections) ? response.sections.map((section: any) => ({
-            id: section.id,
-            title: section.title,
-            description: section.description || '',
-            lessons: Array.isArray(section.lessons) ? section.lessons.map((lesson: any) => ({
-              id: lesson.id,
-              title: lesson.title,
-              type: lesson.type || 'VIDEO',
-              content: lesson.content || '',
-              duration: lesson.duration || 0,
-              order: lesson.order || 0
-            })) : [],
-            order: section.order || 0
-          })) : []
+          sections: [
+            // First, include sections with their lessons
+            ...(Array.isArray(response.sections) ? response.sections.map((section: any) => ({
+              id: section.id,
+              title: section.title,
+              description: section.description || '',
+              order: section.order || 0,
+              lessons: Array.isArray(section.lessons) ? section.lessons.map((lesson: any) => ({
+                id: lesson.id,
+                title: lesson.title,
+                type: lesson.type || 'VIDEO',
+                content: lesson.content || '',
+                duration: lesson.duration || 0,
+                order: lesson.order || 0,
+                videoUrl: lesson.type === 'VIDEO' ? lesson.content : undefined,
+              })) : []
+            })) : []),
+            // If there are any lessons without sections, create a default section for them
+            ...(Array.isArray(response.lessons) && response.lessons.some(lesson => !lesson.sectionId) ? [{
+              id: 'default-section',
+              title: 'Untitled Section',
+              description: '',
+              order: response.sections?.length || 0,
+              lessons: response.lessons
+                .filter((lesson: any) => !lesson.sectionId)
+                .map((lesson: any) => ({
+                  id: lesson.id,
+                  title: lesson.title,
+                  type: lesson.type || 'VIDEO',
+                  content: lesson.content || '',
+                  duration: lesson.duration || 0,
+                  order: lesson.order || 0,
+                  videoUrl: lesson.type === 'VIDEO' ? lesson.content : undefined,
+                }))
+            }] : [])
+          ]
         },
         pricing: {
           price: Number(response.price) || 0,
