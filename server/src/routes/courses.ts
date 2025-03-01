@@ -841,6 +841,56 @@ router.post('/:id/:step', authenticateUser, async(req,res) => {
 
       console.log('Processed sections:', sectionsArray);
 
+      // For pricing step, handle certification data
+      if (step === 'pricing') {
+        const {
+          price,
+          isLiveEnabled,
+          liveSessionDetails,
+          hasCertification,
+          certificationPrice,
+          certificationDetails,
+          status,
+          completedSteps
+        } = rest;
+
+        // Safely parse completedSteps
+        let parsedCompletedSteps = [];
+        try {
+          if (completedSteps) {
+            parsedCompletedSteps = typeof completedSteps === 'string'
+              ? JSON.parse(completedSteps)
+              : Array.isArray(completedSteps)
+                ? completedSteps
+                : [];
+          }
+        } catch (e) {
+          console.warn('Error parsing completedSteps, initializing as empty array:', e);
+        }
+
+        const course = await prisma.course.update({
+          where: { id },
+          data: {
+            price: Number(price) || 0,
+            isLiveEnabled: Boolean(isLiveEnabled),
+            liveSessionDetails: isLiveEnabled && liveSessionDetails ? 
+              typeof liveSessionDetails === 'string' ? liveSessionDetails : JSON.stringify(liveSessionDetails) 
+              : null,
+            hasCertification: Boolean(hasCertification),
+            certificationPrice: hasCertification ? Number(certificationPrice) : null,
+            certificationDetails: hasCertification && certificationDetails ? 
+              typeof certificationDetails === 'string' ? certificationDetails : JSON.stringify(certificationDetails)
+              : null,
+            lastSavedStep: step,
+            completedSteps: JSON.stringify(parsedCompletedSteps),
+            status: status || 'DRAFT',
+            updatedAt: new Date()
+          },
+        });
+
+        return res.status(201).json(course);
+      }
+
       // Validate and format sections data
       const validSections = sectionsArray
         .filter((section: unknown): section is Section => 

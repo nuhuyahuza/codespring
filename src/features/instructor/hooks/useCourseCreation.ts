@@ -142,7 +142,8 @@ export function useCourseCreation(courseId?: string) {
         pricing: {
           price: Number(response.price) || 0,
           isLiveEnabled: Boolean(response.isLiveEnabled),
-          hasCertification: false,
+          hasCertification: Boolean(response.hasCertification),
+          certificationPrice: Number(response.certificationPrice) || 0,
           status: (response.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT') as 'DRAFT' | 'PUBLISHED',
           liveSessionDetails: response.liveSessionDetails ? JSON.parse(response.liveSessionDetails as string) : undefined,
         },
@@ -290,11 +291,33 @@ export function useCourseCreation(courseId?: string) {
             throw new Error('Course ID not found');
           }
           endpoint = `/courses/${storedCourseIdPricing}/${step}`;
-          const pricingCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
+          
+          // Safely parse completedSteps or initialize as empty array
+          let pricingCompletedSteps = [];
+          try {
+            if (courseData.completedSteps) {
+              pricingCompletedSteps = typeof courseData.completedSteps === 'string' 
+                ? JSON.parse(courseData.completedSteps)
+                : Array.isArray(courseData.completedSteps) 
+                  ? courseData.completedSteps 
+                  : [];
+            }
+          } catch (e) {
+            console.warn('Error parsing completedSteps, initializing as empty array:', e);
+          }
+
           payload = {
             price: Number(data.price) || 0,
             isLiveEnabled: Boolean(data.isLiveEnabled),
             liveSessionDetails: data.isLiveEnabled ? JSON.stringify(data.liveSessionDetails) : null,
+            hasCertification: Boolean(data.hasCertification),
+            certificationPrice: data.hasCertification ? Number(data.certificationPrice) : null,
+            certificationDetails: data.hasCertification ? JSON.stringify({
+              type: 'COURSE_COMPLETION',
+              validityPeriod: data.certificationValidityPeriod || 'LIFETIME',
+              minimumScore: data.certificationMinimumScore || 80,
+              assessmentType: data.certificationAssessmentType || 'FINAL_EXAM'
+            }) : null,
             lastSavedStep: step,
             completedSteps: JSON.stringify([...new Set([...pricingCompletedSteps, step])]),
             status: data.status || 'DRAFT'

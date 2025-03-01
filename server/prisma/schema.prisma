@@ -97,6 +97,9 @@ model Course {
   language          String          @default("English")
   tags              String?         @db.Text
   completionCriteria Json?          // Define what constitutes course completion
+  hasCertification  Boolean         @default(false)  // New field
+  certificationPrice Float?         // New field
+  certificationDetails Json?        // New field to store certification configuration
 
   // Relations
   instructor        User            @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
