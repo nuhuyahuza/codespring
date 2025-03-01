@@ -759,14 +759,27 @@ router.post('/:id/:step', authenticateUser, async(req,res) => {
         where: { courseId: id }
       });
 
+      // Safely parse completedSteps
+      let parsedCompletedSteps = [];
+      try {
+        if (completedSteps) {
+          parsedCompletedSteps = typeof completedSteps === 'string'
+            ? JSON.parse(completedSteps)
+            : Array.isArray(completedSteps)
+              ? completedSteps
+              : [];
+        }
+      } catch (e) {
+        console.warn('Error parsing completedSteps, initializing as empty array:', e);
+      }
+
       // Update course
       const course = await prisma.course.update({
         where: { id },
         data: {
           ...rest,
           lastSavedStep: step,
-          completedSteps: Array.isArray(completedSteps) ? completedSteps : 
-            typeof completedSteps === 'string' ? JSON.parse(completedSteps) : undefined,
+          completedSteps: JSON.stringify(parsedCompletedSteps),
           updatedAt: new Date()
         },
       });

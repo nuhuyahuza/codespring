@@ -226,7 +226,20 @@ export function useCourseCreation(courseId?: string) {
             throw new Error('Course ID not found');
           }
           endpoint = `/courses/${storedCourseIdCurriculum}/${step}`;
-          const curriculumCompletedSteps = courseData.completedSteps ? JSON.parse(courseData.completedSteps as string) : [];
+          
+          // Safely parse completedSteps or initialize as empty array
+          let curriculumCompletedSteps = [];
+          try {
+            if (courseData.completedSteps) {
+              curriculumCompletedSteps = typeof courseData.completedSteps === 'string' 
+                ? JSON.parse(courseData.completedSteps)
+                : Array.isArray(courseData.completedSteps) 
+                  ? courseData.completedSteps 
+                  : [];
+            }
+          } catch (e) {
+            console.warn('Error parsing completedSteps, initializing as empty array:', e);
+          }
 
           console.log('Curriculum data received:', data); // Debug log
 

@@ -170,9 +170,6 @@ export function CourseCreationPage() {
             initialData={courseData.pricing}
             onSave={async (data) => {
               await handleSaveAndContinue(data);
-              if (data.status === 'PUBLISHED') {
-                await publishCourse();
-              }
             }}
           />
         );
