@@ -22,6 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { ImageUpload } from '@/components/shared/ImageUpload';
+import { useCourseThumbnail } from '../../hooks/useCourseThumbnail';
+import { toast } from 'react-hot-toast';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -63,18 +66,21 @@ const LANGUAGES = [
   'Other'
 ];
 
-export function BasicInfoStep({ initialData, onSave }: any) {
+export function BasicInfoStep({ initialData, onSave, courseId }: any) {
   const [newTag, setNewTag] = useState('');
+  const { uploadThumbnail } = useCourseThumbnail(courseId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const form = useForm({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      title: '',
-      description: '',
-      category: '',
-      level: 'BEGINNER',
-      language: 'English',
-      tags: [],
+    defaultValues: {
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      category: initialData?.category || '',
+      level: initialData?.level || '',
+      language: initialData?.language || 'English',
+      thumbnail: initialData?.thumbnail || '',
+      tags: initialData?.tags || [],
     },
   });
 
@@ -260,7 +266,48 @@ export function BasicInfoStep({ initialData, onSave }: any) {
           )}
         />
 
-        <Button type="submit" className="w-full">Save and Continue</Button>
+        <FormField
+          control={form.control}
+          name="thumbnail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Course Thumbnail</FormLabel>
+              <FormControl>
+                <ImageUpload
+                  value={field.value || ''}
+                  onChange={async (file) => {
+                    try {
+                      setIsSubmitting(true);
+                      const url = await uploadThumbnail(file);
+                      field.onChange(url);
+                      
+                      // Update form data with the new thumbnail URL
+                      const currentData = form.getValues();
+                      await onSave({
+                        ...currentData,
+                        thumbnail: url
+                      });
+                    } catch (error) {
+                      console.error('Failed to upload thumbnail:', error);
+                      toast.error('Failed to upload image. Please try again.');
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  maxSize={5}
+                  aspectRatio={16/9}
+                  accept="image/*"
+                />
+              </FormControl>
+              <FormDescription>
+                Upload a high-quality thumbnail image (16:9 aspect ratio recommended). Supports JPEG, PNG, GIF, WebP and other image formats.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>Save and Continue</Button>
       </form>
     </Form>
   );

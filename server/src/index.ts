@@ -46,7 +46,8 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Ensure uploads directories exist
 const uploadDirs = [
   path.join(process.cwd(), 'uploads/videos'),
-  path.join(process.cwd(), 'uploads/thumbnails')
+  path.join(process.cwd(), 'uploads/thumbnails'),
+  path.join(process.cwd(), 'uploads/course-thumbnails')
 ];
 
 for (const dir of uploadDirs) {

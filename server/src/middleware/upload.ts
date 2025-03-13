@@ -6,8 +6,10 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/course-thumbnails/');
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    // Use courseId from the URL parameters as the filename
+    const courseId = req.params.id;
+    const extension = path.extname(file.originalname);
+    cb(null, `${courseId}${extension}`);
   }
 });
 
@@ -17,11 +19,11 @@ export const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Accept all image types
+    if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed.'));
+      cb(new Error('Invalid file type. Only image files are allowed.'));
     }
   }
 }); 

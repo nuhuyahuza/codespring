@@ -875,12 +875,12 @@ router.post('/:id/:step', authenticateUser, async(req,res) => {
             isLiveEnabled: Boolean(isLiveEnabled),
             liveSessionDetails: isLiveEnabled && liveSessionDetails ? 
               typeof liveSessionDetails === 'string' ? liveSessionDetails : JSON.stringify(liveSessionDetails) 
-              : null,
+              : {},
             hasCertification: Boolean(hasCertification),
             certificationPrice: hasCertification ? Number(certificationPrice) : null,
             certificationDetails: hasCertification && certificationDetails ? 
               typeof certificationDetails === 'string' ? certificationDetails : JSON.stringify(certificationDetails)
-              : null,
+              : {},
             lastSavedStep: step,
             completedSteps: JSON.stringify(parsedCompletedSteps),
             status: status || 'DRAFT',

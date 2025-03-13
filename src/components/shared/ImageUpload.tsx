@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, Image as ImageIcon } from 'lucide-react';
-import { useUploadImage } from '@/features/shared/hooks/useUploadImage';
 
 interface ImageUploadProps {
   value: string;
-  onChange: (url: string) => void;
+  onChange: (file: File) => void;
   maxSize?: number; // in MB
   aspectRatio?: number;
+  accept?: string; // Allow custom accept types
 }
 
 export function ImageUpload({
@@ -16,23 +16,35 @@ export function ImageUpload({
   onChange,
   maxSize = 5,
   aspectRatio,
+  accept = "image/*"
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string>(value);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploadImage, isLoading, error } = useUploadImage();
+
+  useEffect(() => {
+    // Update preview when value changes from parent
+    setPreview(value);
+  }, [value]);
 
   const handleFileSelect = async (file: File) => {
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`File size must be less than ${maxSize}MB`);
+      setError(`File size must be less than ${maxSize}MB`);
       return;
     }
 
-    try {
-      const url = await uploadImage(file);
-      onChange(url);
-    } catch (err) {
-      console.error('Failed to upload image:', err);
-    }
+    setError(null);
+    
+    // Create a preview URL for the selected file
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+    
+    // Clean up the object URL when we create a new one
+    return () => URL.revokeObjectURL(objectUrl);
+    
+    onChange(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -49,7 +61,7 @@ export function ImageUpload({
     setIsDragging(false);
 
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file) {
       await handleFileSelect(file);
     }
   };
@@ -69,20 +81,18 @@ export function ImageUpload({
     <div className="space-y-4">
       <Input
         type="file"
-        accept="image/*"
+        accept={accept}
         className="hidden"
         ref={fileInputRef}
         onChange={handleFileChange}
       />
 
-      {value ? (
-        <div className="relative group">
+      {(preview || value) ? (
+        <div className="relative group w-full h-[225px] bg-muted rounded-lg overflow-hidden">
           <img
-            src={value}
-            alt="Uploaded image"
-            className={`w-full rounded-lg object-cover ${
-              aspectRatio ? `aspect-[${aspectRatio}]` : 'aspect-video'
-            }`}
+            src={preview || value}
+            alt="Selected image"
+            className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="secondary" onClick={handleClick}>
@@ -92,9 +102,9 @@ export function ImageUpload({
         </div>
       ) : (
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center ${
+          className={`w-full h-[225px] border-2 border-dashed rounded-lg p-8 text-center flex items-center justify-center ${
             isDragging ? 'border-primary bg-primary/10' : 'border-muted'
-          } transition-colors`}
+          } transition-colors cursor-pointer`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
