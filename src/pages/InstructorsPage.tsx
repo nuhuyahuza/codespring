@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Users, BookOpen } from 'lucide-react';
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 interface Instructor {
   id: string;
@@ -31,8 +31,8 @@ export function InstructorsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/instructors`);
-        setInstructors(response.data);
+        const response = await api.get<Instructor[]>(`/instructors`);
+        setInstructors(response);
       } catch (error) {
         console.error('Error fetching instructors:', error);
         setError('Failed to load instructors. Please try again later.');

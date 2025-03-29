@@ -56,6 +56,53 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+
+// Get featured courses
+router.get('/featured', async (req, res) => {
+  try {
+    const featuredCourses = await prisma.course.findMany({
+      take: 3,
+      where: {
+        status: 'PUBLISHED',
+      },
+      orderBy: [
+        {
+          createdAt: 'desc'
+        }
+      ],
+      include: {
+        instructor: {
+          select: {
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            enrollments: true,
+          },
+        },
+      },
+    });
+
+    const formattedCourses = featuredCourses.map(course => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      price: course.price,
+      thumbnail: course.imageUrl || '/course-placeholder.jpg',
+      instructor: course.instructor.name,
+      enrolled: course._count.enrollments,
+    }));
+
+    res.json(formattedCourses);
+  } catch (error) {
+    console.error('Error fetching featured courses:', error);
+    res.status(500).json({ error: 'Failed to fetch featured courses' });
+  }
+});
+
+
 // Get a single course
 router.get('/:id', async (req, res) => {
   try {
@@ -337,6 +384,7 @@ router.get('/:id/progress', authenticateUser, async (req, res) => {
 router.post('/:id/enroll', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params;
+    const { status } = req.body;
     const userId = req.user!.id;
 
     // Check if course exists
@@ -367,6 +415,7 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
         id: crypto.randomUUID(),
         userId,
         courseId: id,
+        status,
         updatedAt: new Date()
       }
     });
@@ -391,50 +440,6 @@ router.post('/:id/enroll', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error enrolling in course:', error);
     res.status(500).json({ error: 'Failed to enroll in course' });
-  }
-});
-
-// Get featured courses
-router.get('/featured', async (req, res) => {
-  try {
-    const featuredCourses = await prisma.course.findMany({
-      take: 3,
-      where: {
-        status: 'PUBLISHED',
-      },
-      orderBy: [
-        {
-          createdAt: 'desc'
-        }
-      ],
-      include: {
-        instructor: {
-          select: {
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            enrollments: true,
-          },
-        },
-      },
-    });
-
-    const formattedCourses = featuredCourses.map(course => ({
-      id: course.id,
-      title: course.title,
-      description: course.description,
-      price: course.price,
-      thumbnail: course.imageUrl || '/course-placeholder.jpg',
-      instructor: course.instructor.name,
-      enrolled: course._count.enrollments,
-    }));
-
-    res.json(formattedCourses);
-  } catch (error) {
-    console.error('Error fetching featured courses:', error);
-    res.status(500).json({ error: 'Failed to fetch featured courses' });
   }
 });
 

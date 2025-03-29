@@ -38,10 +38,10 @@ export function VideoLesson({
           />
         </div>
       </div>
-
-      <div className="prose dark:prose-invert max-w-none">
+    {!content.includes('videos') && (<div className="prose dark:prose-invert max-w-none">
         <div dangerouslySetInnerHTML={{ __html: content }} />
-      </div>
+      </div>)
+    }
     </Card>
   );
 } 

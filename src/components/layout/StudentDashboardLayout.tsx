@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Video,
@@ -11,8 +11,8 @@ import {
   HelpCircle,
   ChevronDown,
   Menu,
-  X,
   LayoutDashboard,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,63 +32,64 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     title: 'Dashboard',
-    href: '/dashboard/student',
+    href: '/student/dashboard',
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
     title: 'My Courses',
-    href: '/dashboard/student/courses',
+    href: '/student/courses',
     icon: <BookOpen className="h-5 w-5" />,
     children: [
-      { title: 'In Progress', href: '/dashboard/student/courses?status=in-progress' },
-      { title: 'Completed', href: '/dashboard/student/courses?status=completed' },
+      { title: 'In Progress', href: '/student/courses?status=in-progress' },
+      { title: 'Completed', href: '/student/courses?status=completed' },
     ],
   },
   {
     title: 'Live Classes',
-    href: '/dashboard/student/live-classes',
+    href: '/student/live-classes',
     icon: <Video className="h-5 w-5" />,
   },
   {
     title: 'Assignments',
-    href: '/dashboard/student/assignments',
+    href: '/student/assignments',
     icon: <FileText className="h-5 w-5" />,
     children: [
-      { title: 'Pending', href: '/dashboard/student/assignments?status=pending' },
-      { title: 'Submitted', href: '/dashboard/student/assignments?status=submitted' },
+      { title: 'Pending', href: '/student/assignments?status=pending' },
+      { title: 'Submitted', href: '/student/assignments?status=submitted' },
+      { title: 'Grades', href: '/student/assignments/grades' }
     ],
   },
   {
     title: 'Community',
-    href: '/dashboard/student/community',
+    href: '/student/community',
     icon: <Users className="h-5 w-5" />,
   },
   {
     title: 'Certificates',
-    href: '/dashboard/student/certificates',
+    href: '/student/certificates',
     icon: <Award className="h-5 w-5" />,
   },
+  {
+    title: 'Calendar',
+    href: '/student/calendar',
+    icon: <Calendar className="h-5 w-5" />,
+  }
 ];
 
 const bottomNavItems: NavItem[] = [
   {
     title: 'Notifications',
-    href: '/dashboard/student/notifications',
+    href: '/student/notifications',
     icon: <Bell className="h-5 w-5" />,
   },
   {
-    title: 'Settings',
-    href: '/dashboard/student/settings',
-    icon: <Settings className="h-5 w-5" />,
-  },
-  {
     title: 'Support',
-    href: '/dashboard/student/support',
+    href: '/student/support',
     icon: <HelpCircle className="h-5 w-5" />,
   },
 ];
 
-export function StudentDashboardLayout({ children }: { children: React.ReactNode }) {
+export function StudentDashboardLayout() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
 
@@ -190,9 +191,11 @@ export function StudentDashboardLayout({ children }: { children: React.ReactNode
       </Sheet>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col min-h-screen">
+        <main className="flex-1 overflow-y-auto p-4">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 } 

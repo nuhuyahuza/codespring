@@ -31,24 +31,12 @@ export function PaymentModal({
       setIsProcessing(true);
       
       if (isDev) {
-        console.log('Submitting enrollment for course:', courseId);
-        
-        const response = await api.post<{ success: boolean }>(`/courses/${courseId}/enroll`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-        console.log(response);
-        if (!response.success) {
-          throw new Error('Enrollment failed');
-        }
-
-        await updateUser();
-        toast.success('Successfully enrolled in course!');
-        onPaymentComplete();
+        enroll();
       } else {
         // Handle production payment flow here
+        if(false){
+          enroll();
+        }
       }
     } catch (error) {
       console.error('Error enrolling in course:', error);
@@ -59,19 +47,30 @@ export function PaymentModal({
     }
   };
 
-  const handlePaymentSuccess = async () => {
+  const enroll = async () => {
     try {
-      await api.post(`/courses/${courseId}/enroll`, {}, {
+      console.log('Submitting enrollment for course:', courseId);
+        
+      const response = await api.post<{ success: boolean }>(`/courses/${courseId}/enroll`, {status:"active"}, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
+      console.log(response);
+      if (!response.success) {
+        throw new Error('Enrollment failed');
+      }
+
       await updateUser();
+      toast.success('Successfully enrolled in course!');
       onPaymentComplete();
     } catch (error) {
       console.error('Error enrolling in course:', error);
       toast.error('Failed to enroll in course. Please try again.');
+    } finally {
+      setIsProcessing(false);
+      onClose();
     }
   };
 

@@ -28,6 +28,8 @@ export function CourseDetailPage() {
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const navigate = useNavigate();
+  const { token } = useAuth();
+
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
@@ -53,7 +55,12 @@ export function CourseDetailPage() {
   const { data: enrollmentStatus } = useQuery({
     queryKey: ['enrollmentStatus', courseId],
     queryFn: async () => {
-      const response = await api.get<{ isEnrolled: boolean }>(`/student/courses/${courseId}/enrollment-status`);
+      const response = await api.get<{ isEnrolled: boolean }>(`/student/courses/${courseId}/enrollment-status`,{
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
       return response.isEnrolled;
     },
     enabled: user?.role === 'STUDENT', // Only run for students
@@ -84,6 +91,7 @@ export function CourseDetailPage() {
 
   const handlePaymentComplete = () => {
     setShowPaymentModal(false);
+    console.log(showPaymentModal);
     toast.success('Successfully enrolled in the course!');
     navigate(`/courses/${courseId}/learn`);
   };

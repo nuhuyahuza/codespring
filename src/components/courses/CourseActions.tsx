@@ -75,7 +75,7 @@ export function CourseActions({ courseId, instructorId, price, isEnrolled, onEnr
       className="w-full bg-green-600 hover:bg-green-700"
       onClick={onEnroll}
     >
-      Add to Cart - ${price.toFixed(2)}
+      Add to Cart - ${price?.toFixed(2)}
     </Button>
   );
 }

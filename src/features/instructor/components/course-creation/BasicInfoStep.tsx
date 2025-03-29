@@ -109,7 +109,6 @@ export function BasicInfoStep({ initialData, onSave, courseId }: any) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
         <FormField
           control={form.control}
           name="title"
@@ -308,7 +307,6 @@ export function BasicInfoStep({ initialData, onSave, courseId }: any) {
         />
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>Save and Continue</Button>
-      </form>
     </Form>
   );
 } 

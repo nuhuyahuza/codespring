@@ -3,6 +3,7 @@ import { createContext } from 'react';
 export interface User {
   id: string;
   role: string;
+  name:string;
   enrolledCourses?: string[];
   hasCompletedOnboarding: boolean;
   // ... other user properties

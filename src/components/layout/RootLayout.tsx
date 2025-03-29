@@ -21,7 +21,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   };
 
   // Don't show header on auth pages or student pages
-  const showHeaderAndFooter = ['/login', '/signup', '/onboarding','/dashboard/instructor','/student'].includes(location.pathname) || location.pathname.startsWith('/dashboard');
+  const showHeaderAndFooter = ['/login', '/signup', '/onboarding','/dashboard/instructor','/student'].includes(location.pathname) || location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/student') || location.pathname.startsWith('/instructor') || location.pathname.startsWith('/admin');
   const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
