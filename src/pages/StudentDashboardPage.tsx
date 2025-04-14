@@ -17,16 +17,13 @@ export function StudentDashboardPage() {
 
   if (isLoading) {
     return (
-      <StudentDashboardLayout>
         <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </StudentDashboardLayout>
     );
   }
 
   return (
-    <StudentDashboardLayout>
       <div className="container py-6 space-y-6">
         {/* Welcome Section */}
         <div className="space-y-2">
@@ -69,7 +66,7 @@ export function StudentDashboardPage() {
               <CardTitle>Continue Learning</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {dashboard?.recentCourses.map((course) => (
+              {dashboard?.enrolledCourses.map((course) => (
                 <div key={course.id} className="flex items-center gap-4 p-4 border rounded-lg">
                   {course.thumbnail && (
                     <img
@@ -123,6 +120,5 @@ export function StudentDashboardPage() {
           </div>
         </div>
       </div>
-    </StudentDashboardLayout>
   );
 } 

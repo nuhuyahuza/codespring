@@ -5,6 +5,7 @@ import axios from 'axios';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuth } from '@/features/auth';
 import { Navigation } from '@/components/layout/Navigation';
+import { api } from '@/lib/api';
 
 interface Course {
   id: string;
@@ -13,7 +14,7 @@ interface Course {
   price: number;
   thumbnail: string;
   instructor: string;
-  enrollments: number;
+  enrolled: number;
 }
 
 interface Testimonial {
@@ -66,8 +67,8 @@ export function LandingPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get('/api/courses/featured');
-        const data = response.data;
+        const response = await api.get<Course[]>('/courses/featured');
+        const data = response;
         
         console.log('API Response:', data); // Debug log
         
@@ -89,7 +90,7 @@ export function LandingPage() {
             typeof course.price === 'number' &&
             typeof course.thumbnail === 'string' &&
             typeof course.instructor === 'string' &&
-            typeof course.enrollments === 'number';
+            typeof course.enrolled === 'number';
             
           if (!isValid) {
             console.error('Invalid course object:', course);
@@ -115,19 +116,6 @@ export function LandingPage() {
   }, []);
 
   const renderFeaturedCourses = () => {
-    if (error) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-destructive">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
 
     if (isLoading) {
       return Array(3).fill(null).map((_, i) => (
@@ -174,7 +162,7 @@ export function LandingPage() {
             {course.description}
           </p>
           <p className="text-sm text-muted-foreground mb-4">
-            By {course.instructor} • {course.enrollments} students
+            By {course.instructor} • {course.enrolled} students
           </p>
           <div className="flex justify-between items-center">
             <span className="text-primary font-semibold">

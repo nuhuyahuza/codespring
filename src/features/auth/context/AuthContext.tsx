@@ -51,7 +51,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        const response = await fetch(`${import.meta.url}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -82,7 +82,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       setError(null);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await fetch(`${import.meta.url}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
