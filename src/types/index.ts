@@ -78,3 +78,16 @@ export interface CommunityGroup {
     timestamp: string;
   }[];
 } 
+
+
+export interface AdminLiveClass {
+	id: string, 
+	title: string, 
+	instructor: string, 
+	course: string, 
+	date: string, 
+	time: string, 
+	duration: string,
+	enrolled: number,
+	status: string
+}

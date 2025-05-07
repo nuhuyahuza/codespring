@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
-import { prisma } from '@/server/db';
-import { verifyToken } from '@/server/utils/auth';
+import { prisma } from '@/lib/prisma';
+import { verifyToken } from '@/lib/auth';
 
 interface ChatMessage {
   id: string;
@@ -11,7 +11,9 @@ interface ChatMessage {
   timestamp: string;
   groupId: string;
 }
-
+interface Member{
+  userId:string;
+}
 export function setupChatServer(io: Server) {
   // Middleware to authenticate socket connections
   io.use(async (socket, next) => {
@@ -121,7 +123,7 @@ export function setupChatServer(io: Server) {
 
         // Create notifications for offline members
         await prisma.notification.createMany({
-          data: groupMembers.map((member) => ({
+          data: groupMembers.map((member:Member) => ({
             userId: member.userId,
             type: 'CHAT_MESSAGE',
             title: 'New message in group chat',

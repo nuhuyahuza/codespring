@@ -1,5 +1,3 @@
-
-import React from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { DashboardCard } from "@/components/ui/dashboard-card";
@@ -29,10 +27,11 @@ import {
 } from "lucide-react";
 import { ScheduleClassModal } from "@/components/modals/schedule-class-modal";
 import { ExportMenu } from "@/components/ui/export-menu";
+import { AdminLiveClass } from "@/types";
 
 const AdminLiveClasses = () => {
   // Mock live class data
-  const liveClasses = [
+  const liveClasses:AdminLiveClass[] = [
     { 
       id: "1", 
       title: "Advanced JavaScript Q&A Session", 

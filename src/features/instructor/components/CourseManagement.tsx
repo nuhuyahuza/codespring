@@ -68,7 +68,7 @@ export function CourseManagement() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">My Courses</h2>
         <Button 
-          onClick={() => navigate('/dashboard/courses/create')}
+          onClick={() => navigate('/instructor/courses/create')}
           className="bg-green-600 hover:bg-green-700"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -136,19 +136,19 @@ export function CourseManagement() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}
+                          onClick={() => navigate(`/instructor/courses/${course.id}/edit`)}
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Course
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => navigate(`/dashboard/courses/${course.id}/lessons`)}
+                          onClick={() => navigate(`/instructor/courses/${course.id}/lessons`)}
                         >
                           <BookOpen className="h-4 w-4 mr-2" />
                           Manage Lessons
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => navigate(`/dashboard/courses/${course.id}/students`)}
+                          onClick={() => navigate(`/instructor/courses/${course.id}/students`)}
                         >
                           <Users className="h-4 w-4 mr-2" />
                           View Students

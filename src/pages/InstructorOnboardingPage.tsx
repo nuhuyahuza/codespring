@@ -291,7 +291,6 @@ export function InstructorOnboardingPage() {
                         <FormControl>
                           <Input
                             placeholder="Add your qualifications (comma-separated)"
-                            value={field.value?.join(', ')}
                             onChange={(e) => {
                               const quals = e.target.value
                                 .split(',')

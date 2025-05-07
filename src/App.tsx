@@ -53,6 +53,7 @@ import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminPermissions from "./pages/admin/AdminPermissions";
 import AdminReports from "./pages/admin/AdminReports";
 import Courses from './pages/Courses_1';
+import { CourseManagement } from './features/instructor/components/CourseManagement';
 
 function App() {
   const { isAuthenticated, token } = useAuth();
@@ -124,14 +125,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/dashboard/courses/:courseId/edit" 
-            element={
-              <ProtectedRoute>
-                <CourseCreationPage />
-              </ProtectedRoute>
-            } 
-          />
+      
 
           {/* Student Dashboard Routes */}
           <Route path="/dashboard/student" element={<StudentDashboardPage />} />
@@ -182,17 +176,18 @@ function App() {
             </Route>
             
             {/* Instructor Dashboard Routes */}
-            <Route element={<InstructorDashboardLayout />}>
+              <Route element={<ProtectedRoute><InstructorDashboardLayout /></ProtectedRoute>}>
               <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
-              <Route path="/instructor/courses" element={<NotFound />} />
-              <Route path="/instructor/courses/create" element={<NotFound />} />
-              <Route path="/instructor/live-classes" element={<NotFound />} />
-              <Route path="/instructor/assignments" element={<NotFound />} />
-              <Route path="/instructor/students" element={<NotFound />} />
+              <Route path="/instructor/courses" element={<CourseManagement />} />
+              <Route path="/instructor/courses/create" element={<CourseCreationPage />} />
+              <Route path="/instructor/courses/:courseId/edit" element={<CourseCreationPage />} />
+              <Route path="/instructor/live-classes" element={<AdminLiveClasses />} />
+              <Route path="/instructor/assignments" element={<Assignments />} />
+              <Route path="/instructor/students" element={<AdminStudents />} />
               <Route path="/instructor/analytics" element={<NotFound />} />
               <Route path="/instructor/calendar" element={<NotFound />} />
-              <Route path="/instructor/profile" element={<NotFound />} />
-              <Route path="/instructor/settings" element={<NotFound />} />
+              <Route path="/instructor/profile" element={<Profile />} />
+              <Route path="/instructor/settings" element={<AdminSettings />} />
             </Route>
             
             {/* Admin Dashboard Routes */}

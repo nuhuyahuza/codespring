@@ -34,11 +34,11 @@ export function InstructorDashboardPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin">⌛</div>
-      </div>
-    );
+    // return (
+    //   <div className="flex items-center justify-center min-h-screen">
+    //     <div className="animate-spin">⌛</div>
+    //   </div>
+    // );
   }
 
   if (!isLoading && stats?.courses === 0) {
