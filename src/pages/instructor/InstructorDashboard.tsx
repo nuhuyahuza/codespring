@@ -33,8 +33,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Total Students</p>
-              <p className="stats-value">{stats.totalStudents}</p>
+              <p className="stats-label font-bold">Total Students</p>
+              <p className="stats-value ">{stats.totalStudents}</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100 text-blue-600">
               <Users size={20} />
@@ -50,8 +50,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Your Courses</p>
-              <p className="stats-value">{stats.totalCourses}</p>
+              <p className="stats-label font-bold">Your Courses</p>
+              <p className="stats-value ">{stats.totalCourses}</p>
             </div>
             <div className="p-3 rounded-full bg-green-100 text-green-600">
               <BookOpen size={20} />
@@ -67,8 +67,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Active Classes</p>
-              <p className="stats-value">{stats.activeClasses}</p>
+              <p className="stats-label font-bold">Active Classes</p>
+              <p className="stats-value ">{stats.activeClasses}</p>
             </div>
             <div className="p-3 rounded-full bg-purple-100 text-purple-600">
               <Video size={20} />
@@ -84,8 +84,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Pending Reviews</p>
-              <p className="stats-value">{stats.pendingAssignments}</p>
+              <p className="stats-label font-bold">Pending Reviews</p>
+              <p className="stats-value ">{stats.pendingAssignments}</p>
             </div>
             <div className="p-3 rounded-full bg-amber-100 text-amber-600">
               <FileText size={20} />
@@ -101,8 +101,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Analytics</p>
-              <p className="stats-value">{stats.averageRating} <span className="text-sm">avg. rating</span></p>
+              <p className="stats-label font-bold">Analytics</p>
+              <p className="stats-value ">{stats.averageRating} <span className="text-sm">avg. rating</span></p>
             </div>
             <div className="p-3 rounded-full bg-red-100 text-red-600">
               <BarChart size={20} />
@@ -118,8 +118,8 @@ const InstructorDashboard = () => {
         <DashboardCard className="dashboard-stats-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="stats-label">Schedule</p>
-              <p className="stats-value">5 <span className="text-sm">upcoming</span></p>
+              <p className="stats-label font-bold">Schedule</p>
+              <p className="stats-value ">5 <span className="text-sm">upcoming</span></p>
             </div>
             <div className="p-3 rounded-full bg-indigo-100 text-indigo-600">
               <Calendar size={20} />

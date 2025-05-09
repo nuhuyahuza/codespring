@@ -184,7 +184,7 @@ function App() {
               <Route path="/instructor/live-classes" element={<AdminLiveClasses />} />
               <Route path="/instructor/assignments" element={<Assignments />} />
               <Route path="/instructor/students" element={<AdminStudents />} />
-              <Route path="/instructor/analytics" element={<NotFound />} />
+              <Route path="/instructor/analytics" element={<AdminAnalytics />} />
               <Route path="/instructor/calendar" element={<NotFound />} />
               <Route path="/instructor/profile" element={<Profile />} />
               <Route path="/instructor/settings" element={<AdminSettings />} />

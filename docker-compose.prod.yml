@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-prod
+    env_file:
+      - .env
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_NEXTAUTH_URL=${VITE_NEXTAUTH_URL}
+      - VITE_NEXTAUTH_SECRET=${VITE_NEXTAUTH_SECRET}
+      - VITE_STRIPE_PUBLIC_KEY=${VITE_STRIPE_PUBLIC_KEY}
+      - VITE_CLOUDINARY_CLOUD_NAME=${VITE_CLOUDINARY_CLOUD_NAME}
+      - VITE_CLOUDINARY_UPLOAD_PRESET=${VITE_CLOUDINARY_UPLOAD_PRESET}
+    networks:
+      - codespring-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      - NODE_ENV=production
+      - PORT=3000
+      - CLIENT_URL=${CLIENT_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    depends_on:
+      - db
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - codespring-network
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - codespring-network
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  mysql-data:
+  uploads:
+
+networks:
+  codespring-network:
+    driver: bridge 
