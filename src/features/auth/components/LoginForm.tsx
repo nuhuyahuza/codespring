@@ -29,7 +29,7 @@ export function LoginForm() {
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
       // Check if user needs onboarding
-      if (user.role === 'STUDENT' && !user.onboardingCompleted) {
+      if (user.role === 'STUDENT' && !user.hasCompletedOnboarding) {
         navigate('/onboarding', { replace: true });
       } else {
         const from = location.state?.from?.pathname || '/dashboard';
