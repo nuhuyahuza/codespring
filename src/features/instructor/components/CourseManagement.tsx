@@ -24,31 +24,20 @@ import {
   Trash,
   Users,
   BookOpen,
+  LayoutGrid,
+  LayoutList,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/utils';
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  level: string;
-  duration: number;
-  imageUrl: string | null;
-  _count: {
-    enrollments: number;
-    lessons: number;
-  };
-  updatedAt: string;
-}
+import { Course } from '../types';
+import { CourseCard } from './CourseCard';
 
 export function CourseManagement() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ['instructor-courses'],
@@ -67,13 +56,33 @@ export function CourseManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">My Courses</h2>
-        <Button 
-          onClick={() => navigate('/instructor/courses/create')}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Course
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="h-8 w-8 p-0"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-8 w-8 p-0"
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button 
+            onClick={() => navigate('/instructor/courses/create')}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Course
+          </Button>
+        </div>
       </div>
 
       <div className="flex justify-between">
@@ -87,35 +96,32 @@ export function CourseManagement() {
         </div>
       </div>
 
-      {/* Course Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Level</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead className="text-center">Students</TableHead>
-              <TableHead className="text-center">Lessons</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      {isLoading ? (
+        <div className="text-center py-8">Loading...</div>
+      ) : filteredCourses?.length === 0 ? (
+        <div className="text-center py-8">No courses found</div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses?.map((course) => (
+            <CourseCard key={course.id} course={course} />
+          ))}
+        </div>
+      ) : (
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  Loading...
-                </TableCell>
+                <TableHead>Title</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="text-center">Students</TableHead>
+                <TableHead className="text-center">Lessons</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : filteredCourses?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  No courses found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredCourses?.map((course) => (
+            </TableHeader>
+            <TableBody>
+              {filteredCourses?.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>{course.category}</TableCell>
@@ -161,11 +167,11 @@ export function CourseManagement() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 } 
