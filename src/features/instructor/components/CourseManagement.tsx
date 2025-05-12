@@ -148,7 +148,7 @@ export function CourseManagement() {
                           Edit Course
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => navigate(`/instructor/courses/${course.id}/lessons`)}
+                          onClick={() => navigate(`/instructor/courses/${course.id}/edit?step=curriculum`)}
                         >
                           <BookOpen className="h-4 w-4 mr-2" />
                           Manage Lessons

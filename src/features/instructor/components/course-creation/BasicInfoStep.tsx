@@ -107,8 +107,21 @@ export function BasicInfoStep({ initialData, onSave, courseId }: any) {
     form.setValue('tags', currentTags.filter((tag: string) => tag !== tagToRemove));
   };
 
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      setIsSubmitting(true);
+      await onSave(data);
+    } catch (error) {
+      console.error('Failed to save course:', error);
+      toast.error('Failed to save course. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="title"
@@ -306,7 +319,10 @@ export function BasicInfoStep({ initialData, onSave, courseId }: any) {
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>Save and Continue</Button>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : 'Save and Continue'}
+        </Button>
+      </form>
     </Form>
   );
 } 

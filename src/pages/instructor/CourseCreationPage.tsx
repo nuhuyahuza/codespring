@@ -21,7 +21,6 @@ import { RequirementsStep } from '@/features/instructor/components/course-creati
 import { CurriculumStep } from '@/features/instructor/components/course-creation/CurriculumStep';
 import { PricingStep } from '@/features/instructor/components/course-creation/PricingStep';
 import { useCourseCreation } from '@/features/instructor/hooks/useCourseCreation';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { toast } from 'react-hot-toast';
 
 const STEPS = [
@@ -86,8 +85,7 @@ export function CourseCreationPage() {
     return searchParams.get('step') || 'basics';
   });
   const [showTips, setShowTips] = useState(true);
-  const { courseData, isLoading, saveStep, publishCourse } = useCourseCreation(courseId);
-  
+  const { courseData, isLoading, saveStep } = useCourseCreation(courseId);
   // Sync URL with current step
   useEffect(() => {
     const stepFromUrl = searchParams.get('step');
@@ -100,6 +98,7 @@ export function CourseCreationPage() {
 
   const handleSaveAndContinue = async (stepData: any) => {
     try {
+      console.log("shadow",currentStep,'data',stepData);
       await saveStep(currentStep, stepData);
       
       // Move to next step

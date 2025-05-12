@@ -145,7 +145,7 @@ export function useCourseCreation(courseId?: string) {
           hasCertification: Boolean(response.hasCertification),
           certificationPrice: Number(response.certificationPrice) || 0,
           status: (response.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT') as 'DRAFT' | 'PUBLISHED',
-          liveSessionDetails: response.liveSessionDetails ? JSON.parse(response.liveSessionDetails as string) : undefined,
+          liveSessionDetails: typeof response.liveSessionDetails === 'string' ? JSON.parse(response.liveSessionDetails as string) : undefined,
         },
         completedSteps: response.completedSteps || '[]',
         lastSavedStep: response.lastSavedStep || 'basics'

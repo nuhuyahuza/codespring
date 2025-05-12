@@ -52,6 +52,7 @@ export function PricingStep({ initialData, onSave }: PricingStepProps) {
   // Reset form when initialData changes
   useEffect(() => {
     if (initialData) {
+      console.log('init',initialData)
       form.reset(initialData);
     }
   }, [initialData, form]);

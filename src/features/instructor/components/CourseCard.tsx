@@ -72,7 +72,7 @@ export function CourseCard({ course }: CourseCardProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/instructor/courses/${course.id}/lessons`)}
+            onClick={() => navigate(`/instructor/courses/${course.id}/edit?step=curriculum`)}
             className="w-full"
           >
             <BookOpen className="h-4 w-4 mr-2" />
